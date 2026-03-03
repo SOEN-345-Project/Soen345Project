@@ -10,3 +10,9 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
 }
+
+
+//		<dependency>
+//			<groupId>org.springframework.boot</groupId>
+//			<artifactId>spring-boot-starter-data-jpa</artifactId>
+//		</dependency>
