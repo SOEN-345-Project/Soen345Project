@@ -66,9 +66,11 @@ public class AuthenticationController {
     }
 
     @PostMapping("/resend")
-    public ResponseEntity<?> resendVerification(@RequestParam String email) {
+    public ResponseEntity<?> resendVerification(
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String phoneNumber) {
         try {
-            authenticationService.resendVerificationCode(email);
+            authenticationService.resendVerificationCode(email, phoneNumber);
             return ResponseEntity.ok("Verification code resent successfully");
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -82,7 +84,7 @@ public class AuthenticationController {
 
     @GetMapping("/")
     public String home() {
-        return "Welcome to HexaPedal!";
+        return "Welcome to Eventigo!";
     }
 
     @GetMapping("/check-email")

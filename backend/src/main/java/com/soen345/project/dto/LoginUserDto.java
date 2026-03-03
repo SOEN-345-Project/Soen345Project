@@ -6,10 +6,9 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class LoginUserDto
-{
-    @NotNull(message = "Email is required")
+public class LoginUserDto {
     private String email;
+    private String phoneNumber;
     @NotNull(message = "Password is required")
     private String password;
 }

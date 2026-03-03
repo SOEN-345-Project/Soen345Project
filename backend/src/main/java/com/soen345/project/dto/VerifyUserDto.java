@@ -7,8 +7,8 @@ import lombok.Setter;
 @Getter
 @Setter
 public class VerifyUserDto {
-    @NotNull(message = "Email is required")
     private String email;
+    private String phoneNumber;
     @NotNull(message = "Verification code is required")
     private String verificationCode;
 }

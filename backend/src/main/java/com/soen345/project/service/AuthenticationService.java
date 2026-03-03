@@ -23,19 +23,36 @@ public class AuthenticationService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final EmailService emailService;
+    private final SmsService smsService;
 
 
     public AuthenticationService(UserRepository userRepository, PasswordEncoder passwordEncoder,
-                                 AuthenticationManager authenticationManager, EmailService emailService) {
+                                 AuthenticationManager authenticationManager,
+                                 EmailService emailService, SmsService smsService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.emailService = emailService;
+        this.smsService = smsService;
     }
 
     public User signup(RegisterUserDto input) throws Exception {
-        if (userRepository.findByEmail(input.getEmail()).isPresent()) {
-            throw new RuntimeException("Email already in use");
+        boolean usePhone = "PHONE".equalsIgnoreCase(input.getVerificationMethod());
+
+        if (usePhone) {
+            if (input.getPhoneNumber() == null || input.getPhoneNumber().isBlank()) {
+                throw new RuntimeException("Phone number is required for phone verification");
+            }
+            if (userRepository.findByPhoneNumber(input.getPhoneNumber()).isPresent()) {
+                throw new RuntimeException("Phone number already in use");
+            }
+        } else {
+            if (input.getEmail() == null || input.getEmail().isBlank()) {
+                throw new RuntimeException("Email is required for email verification");
+            }
+            if (userRepository.findByEmail(input.getEmail()).isPresent()) {
+                throw new RuntimeException("Email already in use");
+            }
         }
 
         Customer customer = new Customer();
@@ -50,41 +67,61 @@ public class AuthenticationService {
 
         User saved = userRepository.save(customer);
 
-        sendVerificationEmail(saved);
+        if (usePhone) {
+            sendVerificationSms(saved);
+        } else {
+            sendVerificationEmail(saved);
+        }
         return saved;
     }
 
-    public User authenticate(LoginUserDto input){
-        User user = userRepository.findByEmail(input.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    public User authenticate(LoginUserDto input) {
+        boolean usePhone = (input.getEmail() == null || input.getEmail().isBlank())
+                && input.getPhoneNumber() != null && !input.getPhoneNumber().isBlank();
 
-        if(!user.isEnabled()){
+        User user;
+        String principal;
+
+        if (usePhone) {
+            user = userRepository.findByPhoneNumber(input.getPhoneNumber())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            principal = user.getEmail();
+        } else {
+            user = userRepository.findByEmail(input.getEmail())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            principal = input.getEmail();
+        }
+
+        if (!user.isEnabled()) {
             throw new RuntimeException("User not verified");
         }
 
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        input.getEmail(),
-                        input.getPassword()
-                )
+                new UsernamePasswordAuthenticationToken(principal, input.getPassword())
         );
         return user;
     }
 
     public void verifyUser(VerifyUserDto input) {
-        Optional<User> optionalUser = userRepository.findByEmail(input.getEmail());
-        if(optionalUser.isPresent()){
+        boolean usePhone = (input.getEmail() == null || input.getEmail().isBlank())
+                && input.getPhoneNumber() != null && !input.getPhoneNumber().isBlank();
+
+        Optional<User> optionalUser = usePhone
+                ? userRepository.findByPhoneNumber(input.getPhoneNumber())
+                : userRepository.findByEmail(input.getEmail());
+
+        if (optionalUser.isPresent()) {
             User user = optionalUser.get();
-            if(user.getVerificationCodeExpiresAt().isBefore(LocalDateTime.now())){
-                 throw new RuntimeException("Verification code expired");
+            if (user.getVerificationCodeExpiresAt().isBefore(LocalDateTime.now())) {
+                throw new RuntimeException("Verification code expired");
             }
-            if(user.getVerificationCode().equals(input.getVerificationCode())){
-            user.setEnabled(true);
-            user.setVerificationCode(null);
-            user.setVerificationCodeExpiresAt(null);
-            userRepository.save(user);
+            if (user.getVerificationCode().equals(input.getVerificationCode())) {
+                user.setEnabled(true);
+                user.setVerificationCode(null);
+                user.setVerificationCodeExpiresAt(null);
+                userRepository.save(user);
             } else {
-                 throw new RuntimeException("Invalid verification code");
+                throw new RuntimeException("Invalid verification code");
             }
         } else {
             throw new RuntimeException("User not found");
@@ -108,34 +145,52 @@ public class AuthenticationService {
         return userRepository.save(admin);
     }
 
-    public void resendVerificationCode(String email) {
-        Optional<User> optionalUser = userRepository.findByEmail(email);
-        if(optionalUser.isPresent()){
+    public void resendVerificationCode(String email, String phoneNumber) {
+        boolean usePhone = (email == null || email.isBlank())
+                && phoneNumber != null && !phoneNumber.isBlank();
+
+        Optional<User> optionalUser = usePhone
+                ? userRepository.findByPhoneNumber(phoneNumber)
+                : userRepository.findByEmail(email);
+
+        if (optionalUser.isPresent()) {
             User user = optionalUser.get();
-            if(user.isEnabled()){
+            if (user.isEnabled()) {
                 throw new RuntimeException("User already verified");
             }
             user.setVerificationCode(generateVerificationCode());
             user.setVerificationCodeExpiresAt(LocalDateTime.now().plusMinutes(15));
-            sendVerificationEmail(user);
             userRepository.save(user);
+            if (usePhone) {
+                sendVerificationSms(user);
+            } else {
+                sendVerificationEmail(user);
+            }
         } else {
             throw new RuntimeException("User not found");
         }
     }
 
     public void sendVerificationEmail(User user) {
-        String subject = "HexaPedal Account Verification";
+        String subject = "Eventigo Account Verification";
         String text = "Dear " + user.getFirstName() + ",\n\n"
-                + "Thank you for registering with HexaPedal! Please verify your account.\n\n"
-                 + "Verification Code: " + user.getVerificationCode() + "\n\n"
+                + "Thank you for registering with Eventigo! Please verify your account.\n\n"
+                + "Verification Code: " + user.getVerificationCode() + "\n\n"
                 + "This code will expire in 15 minutes.\n\n"
                 + "Best regards,\n"
-                + "The HexaPedal Team";
+                + "The Eventigo Team";
         try {
             emailService.sendVerificationEmail(user.getEmail(), subject, text);
         } catch (Exception e) {
             throw new RuntimeException("Failed to send verification email", e);
+        }
+    }
+
+    public void sendVerificationSms(User user) {
+        try {
+            smsService.sendVerificationSms(((Customer) user).getPhoneNumber(), user.getVerificationCode());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send verification SMS", e);
         }
     }
 

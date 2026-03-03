@@ -11,11 +11,9 @@ public class RegisterUserDto {
     private String firstName;
     @NotNull(message = "Last name is required")
     private String lastName;
-    @NotNull(message = "Email is required")
     private String email;
     @NotNull(message = "Password is required")
     private String password;
-    @NotNull(message = "Phone number is required")
     private String phoneNumber;
-
+    private String verificationMethod = "EMAIL";
 }
