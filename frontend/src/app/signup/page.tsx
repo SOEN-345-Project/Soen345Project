@@ -123,7 +123,7 @@ const SignUpPage = () => {
                                             : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
                                     }`}
                                 >
-                                    ✉️ Email
+                                     Email
                                 </button>
                                 <button
                                     type="button"
@@ -134,7 +134,7 @@ const SignUpPage = () => {
                                             : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
                                     }`}
                                 >
-                                    📱 Phone
+                                     Phone
                                 </button>
                             </div>
                         </div>
