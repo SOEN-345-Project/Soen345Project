@@ -32,11 +32,11 @@ const EventsPage = () => {
     const router = useRouter();
 
     useEffect(() => {
-
-        if (localStorage.getItem("userLoggedIn") === null) {
+        if (sessionStorage.getItem("token") === null) {
             router.push("/signin");
         }
     }, []);
+
     const allEvents: Event[] = [
         { id: "1", name: "Rock Concert",    date: "2026-03-20", location: "Montreal",  category: "Music",      isActive: true  },
         { id: "2", name: "Food Festival",   date: "2026-03-25", location: "Toronto",   category: "Food",       isActive: true  },
@@ -91,13 +91,25 @@ const EventsPage = () => {
         <div className="min-h-screen bg-stone-50 pb-20">
             <div className="max-w-5xl mx-auto px-6">
 
-                {/* Header */}
                 <header className="py-14 border-b border-stone-200 mb-10">
-                    <p className="text-xs tracking-widest uppercase text-stone-400 font-medium mb-2">Discover &amp; Explore</p>
-                    <h1 className="text-4xl font-bold text-stone-900 tracking-tight">Available Events</h1>
-                    <p className="mt-2 text-sm text-stone-400 font-light">
-                        {filteredEvents.length} event{filteredEvents.length !== 1 ? "s" : ""} found
-                    </p>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs tracking-widest uppercase text-stone-400 font-medium mb-2">Discover &amp; Explore</p>
+                            <h1 className="text-4xl font-bold text-stone-900 tracking-tight">Available Events</h1>
+                            <p className="mt-2 text-sm text-stone-400 font-light">
+                                {filteredEvents.length} event{filteredEvents.length !== 1 ? "s" : ""} found
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => {
+                                sessionStorage.clear();
+                                router.push("/signin");
+                            }}
+                            className="px-4 py-2 bg-red-700 text-white text-sm font-medium rounded-lg hover:bg-stone-700 active:scale-95 transition-all"
+                        >
+                            Logout
+                        </button>
+                    </div>
                 </header>
 
                 {/* Search & Filters */}

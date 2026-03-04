@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { login } from "@/lib/axios";
 
 const SignInPage = () => {
+
     const router = useRouter();
 
     const [identifier, setIdentifier] = useState<string>("");
@@ -31,10 +32,24 @@ const SignInPage = () => {
                 password,
             });
 
-            localStorage.setItem("token", response.token);
+
+            const token = response?.token ?? response?.data?.token;
+
+            if (!token) {
+                setError("Login failed: no token received.");
+                return;
+            }
+            sessionStorage.clear();
+            sessionStorage.setItem("userLoggedIn", "true");
+            sessionStorage.setItem("token", token);
             router.push("/event");
         } catch (err: any) {
-            setError(err ?? "Invalid credentials.");
+
+            const message =
+                typeof err === "string"
+                    ? err
+                    : err?.message ?? err?.error ?? "Invalid credentials.";
+            setError(message);
         } finally {
             setLoading(false);
         }

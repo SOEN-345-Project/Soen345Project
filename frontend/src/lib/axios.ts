@@ -1,4 +1,3 @@
-// src/lib/axios.ts
 import axios from "axios";
 
 const api = axios.create({
@@ -8,14 +7,15 @@ const api = axios.create({
     },
 });
 
-
 api.interceptors.response.use(
     (res) => res.data,
-    (err) => Promise.reject(err.response?.data ?? err.message)
+    (err) => Promise.reject(
+        err.response?.data?.message ??
+        err.response?.data ??
+        err.message ??
+        "Something went wrong"
+    )
 );
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
 export interface RegisterUserDto {
     firstName: string;
     lastName: string;
