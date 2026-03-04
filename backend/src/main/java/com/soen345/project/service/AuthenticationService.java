@@ -80,25 +80,27 @@ public class AuthenticationService {
                 && input.getPhoneNumber() != null && !input.getPhoneNumber().isBlank();
 
         User user;
-        String principal;
 
         if (usePhone) {
             user = userRepository.findByPhoneNumber(input.getPhoneNumber())
                     .orElseThrow(() -> new RuntimeException("User not found"));
-            principal = user.getEmail();
+            if (!user.isEnabled()) {
+                throw new RuntimeException("User not verified");
+            }
+            if (!passwordEncoder.matches(input.getPassword(), user.getPassword())) {
+                throw new RuntimeException("Invalid credentials");
+            }
         } else {
             user = userRepository.findByEmail(input.getEmail())
                     .orElseThrow(() -> new RuntimeException("User not found"));
-            principal = input.getEmail();
+            if (!user.isEnabled()) {
+                throw new RuntimeException("User not verified");
+            }
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(input.getEmail(), input.getPassword())
+            );
         }
 
-        if (!user.isEnabled()) {
-            throw new RuntimeException("User not verified");
-        }
-
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(principal, input.getPassword())
-        );
         return user;
     }
 
