@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
+import { useRouter } from "next/navigation";
 interface Event {
     id: string;
     name: string;
@@ -29,6 +29,14 @@ const formatDate = (iso: string) => {
 };
 
 const EventsPage = () => {
+    const router = useRouter();
+
+    useEffect(() => {
+
+        if (localStorage.getItem("userLoggedIn") === null) {
+            router.push("/signin");
+        }
+    }, []);
     const allEvents: Event[] = [
         { id: "1", name: "Rock Concert",    date: "2026-03-20", location: "Montreal",  category: "Music",      isActive: true  },
         { id: "2", name: "Food Festival",   date: "2026-03-25", location: "Toronto",   category: "Food",       isActive: true  },

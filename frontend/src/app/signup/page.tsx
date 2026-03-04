@@ -14,7 +14,6 @@ const SignUpPage = () => {
     const [phonenumber, setPhoneNumber] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
-    const [isAdmin, setIsAdmin] = useState(false);
     const [verificationMethod, setVerificationMethod] = useState<VerificationMethod>("EMAIL");
 
     const [showVerification, setShowVerification] = useState(false);
@@ -34,7 +33,7 @@ const SignUpPage = () => {
             return;
         }
 
-        console.log("Signing up with:", { email, firstName, lastName, phonenumber, password, isAdmin, verificationMethod });
+        console.log("Signing up with:", { email, firstName, lastName, phonenumber, password, verificationMethod });
         setShowVerification(true);
     };
 
@@ -100,11 +99,6 @@ const SignUpPage = () => {
                     <div>
                         <label className="block text-sm font-medium mb-2 text-gray-700">Password</label>
                         <input type="password" className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} />
-                    </div>
-
-                    <div className="flex items-center">
-                        <input type="checkbox" id="admin" className="mr-2 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" checked={isAdmin} onChange={(e) => setIsAdmin(e.target.checked)} />
-                        <label htmlFor="admin" className="text-sm text-gray-700">Sign Up as Administrator</label>
                     </div>
 
                     <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition duration-200 font-medium">
