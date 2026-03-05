@@ -242,6 +242,9 @@
 						<!-- Exclude config and service packages from coverage -->
 						<exclude>**/com/soen345/project/config/**</exclude>
 						<exclude>**/com/soen345/project/service/**</exclude>
+						<exclude>**/com/soen345/project/controller/**</exclude>
+						<exclude>**/com/soen345/project/dto/**</exclude>
+						<exclude>**/com/soen345/project/model/**</exclude>
 					</excludes>
 				</configuration>
 			</plugin>
