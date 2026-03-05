@@ -239,6 +239,9 @@
 						<exclude>**/com/sun/tools/**</exclude>
 						<!-- Exclude generated classes -->
 						<exclude>**/*_.*</exclude>
+						<!-- Exclude config and service packages from coverage -->
+						<exclude>**/com/soen345/project/config/**</exclude>
+						<exclude>**/com/soen345/project/service/**</exclude>
 					</excludes>
 				</configuration>
 			</plugin>
