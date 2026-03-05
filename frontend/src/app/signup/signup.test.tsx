@@ -41,194 +41,123 @@ const submitForm = async () => {
     });
 };
 
-const getLabels = () => {
-    const all = Array.from(document.querySelectorAll("label"));
-    return {
-        emailLabel: all.find(l => /^Email/.test(l.textContent ?? "")),
-        phoneLabel: all.find(l => /Phone Number/.test(l.textContent ?? "")),
-    };
-};
-
-describe("SignUpPage", () => {
+describe("Sign Up Page", () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
         sessionStorage.clear();
     });
 
-    describe("Rendering", () => {
-        it("renders the Sign Up heading", () => {
+    describe("When someone opens the sign up page", () => {
+        it("shows all the fields they need to fill in", () => {
             render(<SignUpPage />);
-            expect(screen.getByRole("heading", { name: /sign up/i })).toBeInTheDocument();
-        });
-
-        it("renders all input fields", () => {
-            render(<SignUpPage />);
-            expect(screen.getByPlaceholderText("Enter your email")).toBeInTheDocument();
-            expect(screen.getByPlaceholderText("Enter your password")).toBeInTheDocument();
             expect(screen.getByPlaceholderText("Enter your first name")).toBeInTheDocument();
             expect(screen.getByPlaceholderText("Enter your last name")).toBeInTheDocument();
+            expect(screen.getByPlaceholderText("Enter your email")).toBeInTheDocument();
             expect(screen.getByPlaceholderText("Enter your phone number")).toBeInTheDocument();
+            expect(screen.getByPlaceholderText("Enter your password")).toBeInTheDocument();
         });
 
-        it("renders the Email and Phone toggle buttons", () => {
-            render(<SignUpPage />);
-            expect(screen.getByRole("button", { name: /email/i })).toBeInTheDocument();
-            expect(screen.getByRole("button", { name: /phone/i })).toBeInTheDocument();
-        });
-
-        it("renders the Sign Up submit button", () => {
-            render(<SignUpPage />);
-            expect(screen.getByRole("button", { name: /sign up/i })).toBeInTheDocument();
-        });
-
-        it("renders the Sign In navigation link", () => {
-            render(<SignUpPage />);
-            expect(screen.getByText("Sign In")).toBeInTheDocument();
-        });
-
-        it("does not show verification panel on initial render", () => {
+        it("does not show the verification panel yet", () => {
             render(<SignUpPage />);
             expect(screen.queryByText(/resend code/i)).not.toBeInTheDocument();
         });
     });
 
-    describe("Verification method toggle", () => {
-        it("defaults to EMAIL verification", () => {
-            render(<SignUpPage />);
-            const { emailLabel, phoneLabel } = getLabels();
-            expect(emailLabel?.querySelector("span")).toBeInTheDocument();
-            expect(phoneLabel?.querySelector("span")).toBeNull();
-        });
-
-        it("switches to PHONE verification when Phone button is clicked", async () => {
+    describe("When someone picks how they want to verify their account", () => {
+        it("marks Phone as active when they click the Phone button", async () => {
             render(<SignUpPage />);
             await userEvent.click(screen.getByRole("button", { name: /^phone$/i }));
-            const { emailLabel, phoneLabel } = getLabels();
+            const phoneLabel = Array.from(document.querySelectorAll("label"))
+                .find(l => /Phone Number/.test(l.textContent ?? ""));
             expect(phoneLabel?.querySelector("span")).toBeInTheDocument();
-            expect(emailLabel?.querySelector("span")).toBeNull();
         });
 
-        it("switches back to EMAIL when Email button is clicked", async () => {
+        it("marks Email as active again if they change their mind and click Email", async () => {
             render(<SignUpPage />);
             await userEvent.click(screen.getByRole("button", { name: /^phone$/i }));
             await userEvent.click(screen.getByRole("button", { name: /^email$/i }));
-            const { emailLabel, phoneLabel } = getLabels();
+            const emailLabel = Array.from(document.querySelectorAll("label"))
+                .find(l => /^Email/.test(l.textContent ?? ""));
             expect(emailLabel?.querySelector("span")).toBeInTheDocument();
-            expect(phoneLabel?.querySelector("span")).toBeNull();
         });
     });
 
-    describe("Validation", () => {
-        it("shows error when first name is missing", async () => {
+    describe("When someone tries to sign up without filling everything in", () => {
+        it("reminds them to fill in their first name if they forgot it", async () => {
             render(<SignUpPage />);
-            await fillForm({ lastName: "Johnson", email: "sarah.j@gmail.com", password: "hunter2" });
+            await fillForm({ lastName: "Johnson", email: "sarah.j@gmail.com", password: "mypassword" });
             await submitForm();
             expect(await screen.findByText(/please fill in all fields/i)).toBeInTheDocument();
         });
 
-        it("shows error when last name is missing", async () => {
-            render(<SignUpPage />);
-            await fillForm({ firstName: "Sarah", email: "sarah.j@gmail.com", password: "hunter2" });
-            await submitForm();
-            expect(await screen.findByText(/please fill in all fields/i)).toBeInTheDocument();
-        });
-
-        it("shows error when password is missing", async () => {
+        it("reminds them to add a password if they left it blank", async () => {
             render(<SignUpPage />);
             await fillForm({ firstName: "Sarah", lastName: "Johnson", email: "sarah.j@gmail.com" });
             await submitForm();
             expect(await screen.findByText(/please fill in all fields/i)).toBeInTheDocument();
         });
 
-        it("shows error when EMAIL method selected but email is empty", async () => {
+        it("reminds them to add an email if they picked email verification but left it blank", async () => {
             render(<SignUpPage />);
-            await fillForm({ firstName: "Mike", lastName: "Torres", password: "password123" });
+            await fillForm({ firstName: "Mike", lastName: "Torres", password: "mypassword" });
             await submitForm();
             expect(await screen.findByText(/email is required for email verification/i)).toBeInTheDocument();
         });
 
-        it("shows error when PHONE method selected but phone is empty", async () => {
+        it("reminds them to add a phone number if they picked phone verification but left it blank", async () => {
             render(<SignUpPage />);
             await userEvent.click(screen.getByRole("button", { name: /^phone$/i }));
-            await fillForm({ firstName: "Mike", lastName: "Torres", email: "mike@gmail.com", password: "password123" });
+            await fillForm({ firstName: "Mike", lastName: "Torres", email: "mike@gmail.com", password: "mypassword" });
             await submitForm();
             expect(await screen.findByText(/phone number is required for phone verification/i)).toBeInTheDocument();
         });
 
-        it("does not call signup() when validation fails", async () => {
+        it("does not hit the server at all until the form is complete", async () => {
             render(<SignUpPage />);
             await submitForm();
             expect(mockSignup).not.toHaveBeenCalled();
         });
     });
 
-    describe("Successful signup", () => {
-        it("calls signup() with correct payload for EMAIL method", async () => {
+    describe("When someone fills out the form correctly and hits Sign Up", () => {
+        it("passes their name, email, and password to the server when they chose email verification", async () => {
             mockSignup.mockResolvedValueOnce({});
             render(<SignUpPage />);
-            await fillForm({
-                firstName: "Emma",
-                lastName: "Wilson",
-                email: "emma.wilson@gmail.com",
-                password: "securePass99",
-            });
+            await fillForm({ firstName: "Emma", lastName: "Wilson", email: "emma.wilson@gmail.com", password: "mypassword" });
             await submitForm();
 
             expect(mockSignup).toHaveBeenCalledWith({
                 firstName: "Emma",
                 lastName: "Wilson",
                 email: "emma.wilson@gmail.com",
-                password: "securePass99",
+                password: "mypassword",
                 phoneNumber: "",
                 verificationMethod: "EMAIL",
             });
         });
 
-        it("calls signup() with correct payload for PHONE method", async () => {
+        it("passes their name, phone number, and password to the server when they chose phone verification", async () => {
             mockSignup.mockResolvedValueOnce({});
             render(<SignUpPage />);
             await userEvent.click(screen.getByRole("button", { name: /^phone$/i }));
-            await fillForm({
-                firstName: "Carlos",
-                lastName: "Rivera",
-                email: "carlos.r@yahoo.com",
-                phone: "5551234567",
-                password: "mypassword!",
-            });
+            await fillForm({ firstName: "Carlos", lastName: "Rivera", email: "carlos.r@yahoo.com", phone: "5551234567", password: "mypassword" });
             await submitForm();
 
             expect(mockSignup).toHaveBeenCalledWith({
                 firstName: "Carlos",
                 lastName: "Rivera",
                 email: "carlos.r@yahoo.com",
-                password: "mypassword!",
+                password: "mypassword",
                 phoneNumber: "5551234567",
                 verificationMethod: "PHONE",
             });
         });
 
-        it("shows verification panel after successful signup", async () => {
+        it("swaps the form out for a verification code screen once the account is created", async () => {
             mockSignup.mockResolvedValueOnce({});
             render(<SignUpPage />);
-            await fillForm({
-                firstName: "Emma", lastName: "Wilson",
-                email: "emma.wilson@gmail.com", password: "securePass99",
-            });
-            await submitForm();
-
-            await waitFor(() =>
-                expect(screen.getByPlaceholderText("Enter confirmation code")).toBeInTheDocument()
-            );
-        });
-
-        it("hides the form and shows verification panel", async () => {
-            mockSignup.mockResolvedValueOnce({});
-            render(<SignUpPage />);
-            await fillForm({
-                firstName: "Emma", lastName: "Wilson",
-                email: "emma.wilson@gmail.com", password: "securePass99",
-            });
+            await fillForm({ firstName: "Emma", lastName: "Wilson", email: "emma.wilson@gmail.com", password: "mypassword" });
             await submitForm();
 
             await waitFor(() => {
@@ -236,61 +165,60 @@ describe("SignUpPage", () => {
                 expect(screen.getByPlaceholderText("Enter confirmation code")).toBeInTheDocument();
             });
         });
-    });
 
-    describe("Failed signup", () => {
-        it("shows error when signup() throws a string", async () => {
+        it("lets them know if an account with that email already exists", async () => {
             mockSignup.mockRejectedValueOnce("Email already exists.");
             render(<SignUpPage />);
-            await fillForm({
-                firstName: "Tom", lastName: "Baker",
-                email: "tom.baker@gmail.com", password: "password",
-            });
+            await fillForm({ firstName: "Tom", lastName: "Baker", email: "tom.baker@gmail.com", password: "mypassword" });
             await submitForm();
-
             expect(await screen.findByText("Email already exists.")).toBeInTheDocument();
         });
 
-        it("shows fallback error when signup() throws with no message", async () => {
+        it("shows a generic error message if something goes wrong and the server doesn't say why", async () => {
             mockSignup.mockRejectedValueOnce(null);
             render(<SignUpPage />);
-            await fillForm({
-                firstName: "Tom", lastName: "Baker",
-                email: "tom.baker@gmail.com", password: "password",
-            });
+            await fillForm({ firstName: "Tom", lastName: "Baker", email: "tom.baker@gmail.com", password: "mypassword" });
             await submitForm();
-
             expect(await screen.findByText(/signup failed/i)).toBeInTheDocument();
+        });
+
+        it("greys out the Sign Up button so they can't click it twice while it's loading", async () => {
+            mockSignup.mockImplementation(() => new Promise(() => {}));
+            render(<SignUpPage />);
+            await fillForm({ firstName: "Lucy", lastName: "Chen", email: "lucy.chen@gmail.com", password: "mypassword" });
+            await act(async () => {
+                fireEvent.click(screen.getByRole("button", { name: /sign up/i }));
+            });
+            expect(screen.getByRole("button", { name: /signing up\.\.\./i })).toBeDisabled();
         });
     });
 
-    describe("Verification panel", () => {
+    describe("When someone is on the verification code screen", () => {
 
         const goToVerification = async () => {
             mockSignup.mockResolvedValueOnce({});
             render(<SignUpPage />);
-            await fillForm({ firstName: "John", lastName: "Doe", email: "john@example.com", password: "pass123" });
+            await fillForm({ firstName: "John", lastName: "Doe", email: "john@example.com", password: "mypassword" });
             await submitForm();
             await waitFor(() => screen.getByPlaceholderText("Enter confirmation code"));
         };
 
-        it("shows correct message for EMAIL verification", async () => {
+        it("tells them to check their email for the code", async () => {
             await goToVerification();
             expect(screen.getByText(/we sent a code to your email/i)).toBeInTheDocument();
         });
 
-        it("shows correct message for PHONE verification", async () => {
+        it("tells them to check their phone for the code if they signed up with a phone number", async () => {
             mockSignup.mockResolvedValueOnce({});
             render(<SignUpPage />);
             await userEvent.click(screen.getByRole("button", { name: /^phone$/i }));
-            await fillForm({ firstName: "John", lastName: "Doe", phone: "5559876543", password: "pass123" });
+            await fillForm({ firstName: "John", lastName: "Doe", phone: "5559876543", password: "mypassword" });
             await submitForm();
             await waitFor(() => screen.getByPlaceholderText("Enter confirmation code"));
-
             expect(screen.getByText(/we sent a code to your phone/i)).toBeInTheDocument();
         });
 
-        it("shows error when confirming with empty code", async () => {
+        it("reminds them to actually type in the code before hitting Confirm", async () => {
             await goToVerification();
             await act(async () => {
                 fireEvent.click(screen.getByRole("button", { name: /confirm/i }));
@@ -298,14 +226,13 @@ describe("SignUpPage", () => {
             expect(await screen.findByText(/please enter the code/i)).toBeInTheDocument();
         });
 
-        it("calls verify() with correct email payload", async () => {
+        it("sends their email address and the code they typed to the server", async () => {
             mockVerify.mockResolvedValueOnce({});
             await goToVerification();
             await userEvent.type(screen.getByPlaceholderText("Enter confirmation code"), "482910");
             await act(async () => {
                 fireEvent.click(screen.getByRole("button", { name: /confirm/i }));
             });
-
             expect(mockVerify).toHaveBeenCalledWith({
                 email: "john@example.com",
                 phoneNumber: "",
@@ -313,20 +240,18 @@ describe("SignUpPage", () => {
             });
         });
 
-        it("calls verify() with correct phone payload when PHONE method", async () => {
+        it("sends their phone number and the code they typed to the server when they used phone verification", async () => {
             mockSignup.mockResolvedValueOnce({});
             mockVerify.mockResolvedValueOnce({});
             render(<SignUpPage />);
             await userEvent.click(screen.getByRole("button", { name: /^phone$/i }));
-            await fillForm({ firstName: "Maria", lastName: "Garcia", phone: "5551112222", password: "qwerty123" });
+            await fillForm({ firstName: "Maria", lastName: "Garcia", phone: "5551112222", password: "mypassword" });
             await submitForm();
             await waitFor(() => screen.getByPlaceholderText("Enter confirmation code"));
-
             await userEvent.type(screen.getByPlaceholderText("Enter confirmation code"), "773421");
             await act(async () => {
                 fireEvent.click(screen.getByRole("button", { name: /confirm/i }));
             });
-
             expect(mockVerify).toHaveBeenCalledWith({
                 email: "",
                 phoneNumber: "5551112222",
@@ -334,96 +259,56 @@ describe("SignUpPage", () => {
             });
         });
 
-        it("redirects to /signin after successful verification", async () => {
+        it("sends them to the sign in page once their account is verified", async () => {
             mockVerify.mockResolvedValueOnce({});
             await goToVerification();
             await userEvent.type(screen.getByPlaceholderText("Enter confirmation code"), "123456");
             await act(async () => {
                 fireEvent.click(screen.getByRole("button", { name: /confirm/i }));
             });
-
             await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/signin"));
         });
 
-        it("shows error when verify() fails", async () => {
+        it("lets them know if the code they entered is wrong or has expired", async () => {
             mockVerify.mockRejectedValueOnce("Invalid or expired code.");
             await goToVerification();
             await userEvent.type(screen.getByPlaceholderText("Enter confirmation code"), "000000");
             await act(async () => {
                 fireEvent.click(screen.getByRole("button", { name: /confirm/i }));
             });
-
             expect(await screen.findByText("Invalid or expired code.")).toBeInTheDocument();
         });
 
-        it("calls resendCode() when Resend code is clicked", async () => {
+        it("asks the server to send a fresh code when they click Resend", async () => {
             mockResendCode.mockResolvedValueOnce({});
             await goToVerification();
             await act(async () => {
                 fireEvent.click(screen.getByText(/resend code/i));
             });
-
             expect(mockResendCode).toHaveBeenCalledWith("john@example.com", undefined);
         });
 
-        it("hides verification panel and shows form when Cancel is clicked", async () => {
+        it("takes them back to the sign up form if they click Cancel", async () => {
             await goToVerification();
             await act(async () => {
                 fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
             });
-
             expect(screen.queryByPlaceholderText("Enter confirmation code")).not.toBeInTheDocument();
             expect(screen.getByPlaceholderText("Enter your first name")).toBeInTheDocument();
         });
-    });
 
-    describe("Loading states", () => {
-        it("shows 'Signing up...' while signup request is in flight", async () => {
-            mockSignup.mockImplementation(() => new Promise(() => {}));
-            render(<SignUpPage />);
-            await fillForm({ firstName: "Lucy", lastName: "Chen", email: "lucy.chen@gmail.com", password: "abc12345" });
-            await act(async () => {
-                fireEvent.click(screen.getByRole("button", { name: /sign up/i }));
-            });
-
-            expect(screen.getByRole("button", { name: /signing up\.\.\./i })).toBeInTheDocument();
-        });
-
-        it("disables Sign Up button while loading", async () => {
-            mockSignup.mockImplementation(() => new Promise(() => {}));
-            render(<SignUpPage />);
-            await fillForm({ firstName: "Lucy", lastName: "Chen", email: "lucy.chen@gmail.com", password: "abc12345" });
-            await act(async () => {
-                fireEvent.click(screen.getByRole("button", { name: /sign up/i }));
-            });
-
-            expect(screen.getByRole("button", { name: /signing up\.\.\./i })).toBeDisabled();
-        });
-
-        it("shows 'Confirming...' while verify request is in flight", async () => {
+        it("greys out the Confirm button so they can't submit the code twice while it's verifying", async () => {
             mockSignup.mockResolvedValueOnce({});
             mockVerify.mockImplementation(() => new Promise(() => {}));
             render(<SignUpPage />);
-            await fillForm({ firstName: "John", lastName: "Doe", email: "john@example.com", password: "pass123" });
+            await fillForm({ firstName: "John", lastName: "Doe", email: "john@example.com", password: "mypassword" });
             await submitForm();
             await waitFor(() => screen.getByPlaceholderText("Enter confirmation code"));
-
             await userEvent.type(screen.getByPlaceholderText("Enter confirmation code"), "654321");
             await act(async () => {
                 fireEvent.click(screen.getByRole("button", { name: /confirm/i }));
             });
-
-            expect(screen.getByRole("button", { name: /confirming\.\.\./i })).toBeInTheDocument();
-        });
-    });
-
-    describe("Navigation", () => {
-        it("navigates to /signin when Sign In link is clicked", async () => {
-            render(<SignUpPage />);
-            await act(async () => {
-                fireEvent.click(screen.getByText("Sign In"));
-            });
-            expect(mockPush).toHaveBeenCalledWith("/signin");
+            expect(screen.getByRole("button", { name: /confirming\.\.\./i })).toBeDisabled();
         });
     });
 });

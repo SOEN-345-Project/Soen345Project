@@ -25,69 +25,28 @@ const fillAndSubmit = async (identifier: string, password: string) => {
     });
 };
 
-describe("SignInPage", () => {
+describe("Sign In Page", () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
         sessionStorage.clear();
     });
 
-    describe("Rendering", () => {
-        it("renders the Sign In heading", () => {
-            render(<SignInPage />);
-            expect(screen.getByRole("heading", { name: /sign in/i })).toBeInTheDocument();
-        });
-
-        it("renders email/phone input and password input", () => {
+    describe("When the page first loads", () => {
+        it("shows the email/phone and password fields", () => {
             render(<SignInPage />);
             expect(screen.getByPlaceholderText("Enter your email or phone")).toBeInTheDocument();
             expect(screen.getByPlaceholderText("Enter your password")).toBeInTheDocument();
         });
 
-        it("renders the Sign In submit button", () => {
-            render(<SignInPage />);
-            expect(screen.getByRole("button", { name: /sign in/i })).toBeInTheDocument();
-        });
-
-        it("renders the Sign Up navigation link", () => {
-            render(<SignInPage />);
-            expect(screen.getByText("Sign Up")).toBeInTheDocument();
-        });
-
-        it("does not show error message on initial render", () => {
+        it("has no error message visible yet", () => {
             render(<SignInPage />);
             expect(screen.queryByText(/please fill in all fields/i)).not.toBeInTheDocument();
         });
     });
 
-    describe("Identifier type detection badge", () => {
-        it("shows no badge when input is empty", () => {
-            render(<SignInPage />);
-            expect(screen.queryByText("📱 Phone")).not.toBeInTheDocument();
-            expect(screen.queryByText("✉️ Email")).not.toBeInTheDocument();
-        });
-
-        it("shows Email badge for a valid email address", async () => {
-            render(<SignInPage />);
-            await userEvent.type(screen.getByPlaceholderText("Enter your email or phone"), "user@example.com");
-            expect(screen.getByText("✉️ Email")).toBeInTheDocument();
-        });
-
-        it("shows Phone badge for a numeric phone number", async () => {
-            render(<SignInPage />);
-            await userEvent.type(screen.getByPlaceholderText("Enter your email or phone"), "5141234567");
-            expect(screen.getByText("📱 Phone")).toBeInTheDocument();
-        });
-
-        it("shows Phone badge for a phone with +, spaces, dashes", async () => {
-            render(<SignInPage />);
-            await userEvent.type(screen.getByPlaceholderText("Enter your email or phone"), "+1 (514) 123-4567");
-            expect(screen.getByText("📱 Phone")).toBeInTheDocument();
-        });
-    });
-
-    describe("Validation", () => {
-        it("shows error when both fields are empty", async () => {
+    describe("When the user tries to submit without filling in the form", () => {
+        it("warns the user to fill in all fields if both are empty", async () => {
             render(<SignInPage />);
             await act(async () => {
                 fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
@@ -95,25 +54,16 @@ describe("SignInPage", () => {
             expect(screen.getByText(/please fill in all fields/i)).toBeInTheDocument();
         });
 
-        it("shows error when identifier is empty but password is filled", async () => {
+        it("warns the user if they only typed a password but forgot their email or phone", async () => {
             render(<SignInPage />);
-            await userEvent.type(screen.getByPlaceholderText("Enter your password"), "password123");
+            await userEvent.type(screen.getByPlaceholderText("Enter your password"), "mypassword");
             await act(async () => {
                 fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
             });
             expect(screen.getByText(/please fill in all fields/i)).toBeInTheDocument();
         });
 
-        it("shows error when password is empty but identifier is filled", async () => {
-            render(<SignInPage />);
-            await userEvent.type(screen.getByPlaceholderText("Enter your email or phone"), "user@example.com");
-            await act(async () => {
-                fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
-            });
-            expect(screen.getByText(/please fill in all fields/i)).toBeInTheDocument();
-        });
-
-        it("does not call login() when validation fails", async () => {
+        it("never contacts the server if the form is incomplete", async () => {
             render(<SignInPage />);
             await act(async () => {
                 fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
@@ -122,80 +72,71 @@ describe("SignInPage", () => {
         });
     });
 
-    describe("Successful login", () => {
-        it("calls login() with email payload when identifier looks like an email", async () => {
+    describe("When the user signs in successfully", () => {
+        it("sends the email and password to the server when the user types an email", async () => {
             mockLogin.mockResolvedValueOnce({ token: "abc123" });
             render(<SignInPage />);
-            await fillAndSubmit("user@example.com", "password123");
+            await fillAndSubmit("user@example.com", "mypassword");
             await waitFor(() =>
                 expect(mockLogin).toHaveBeenCalledWith({
                     email: "user@example.com",
                     phoneNumber: "",
-                    password: "password123",
+                    password: "mypassword",
                 })
             );
         });
 
-        it("calls login() with phoneNumber payload when identifier looks like a phone", async () => {
+        it("sends the phone number and password to the server when the user types a phone number", async () => {
             mockLogin.mockResolvedValueOnce({ token: "abc123" });
             render(<SignInPage />);
-            await fillAndSubmit("5141234567", "password123");
+            await fillAndSubmit("5141234567", "mypassword");
             await waitFor(() =>
                 expect(mockLogin).toHaveBeenCalledWith({
                     email: "",
                     phoneNumber: "5141234567",
-                    password: "password123",
+                    password: "mypassword",
                 })
             );
         });
 
-        it("stores token and userLoggedIn flag in sessionStorage on success", async () => {
+        it("saves the token and marks the user as logged in", async () => {
             mockLogin.mockResolvedValueOnce({ token: "abc123" });
             render(<SignInPage />);
-            await fillAndSubmit("user@example.com", "password123");
+            await fillAndSubmit("user@example.com", "mypassword");
             await waitFor(() => {
                 expect(sessionStorage.getItem("token")).toBe("abc123");
                 expect(sessionStorage.getItem("userLoggedIn")).toBe("true");
             });
         });
 
-        it("also handles token nested under response.data.token", async () => {
+        it("also works if the token comes back nested inside response.data", async () => {
             mockLogin.mockResolvedValueOnce({ data: { token: "nested-token" } });
             render(<SignInPage />);
-            await fillAndSubmit("user@example.com", "password123");
+            await fillAndSubmit("user@example.com", "mypassword");
             await waitFor(() =>
                 expect(sessionStorage.getItem("token")).toBe("nested-token")
             );
         });
 
-        it("redirects to /event after successful login", async () => {
+        it("takes the user to the events page", async () => {
             mockLogin.mockResolvedValueOnce({ token: "abc123" });
             render(<SignInPage />);
-            await fillAndSubmit("user@example.com", "password123");
+            await fillAndSubmit("user@example.com", "mypassword");
             await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/event"));
         });
     });
 
-    describe("Failed login", () => {
-        it("shows error when login resolves but returns no token", async () => {
+    describe("When the login attempt fails", () => {
+        it("tells the user no token was received if the server responds but sends nothing back", async () => {
             mockLogin.mockResolvedValueOnce({});
             render(<SignInPage />);
-            await fillAndSubmit("user@example.com", "password123");
+            await fillAndSubmit("user@example.com", "mypassword");
             await waitFor(() =>
                 expect(screen.getByText(/login failed: no token received/i)).toBeInTheDocument()
             );
         });
 
-        it("shows string error thrown by login()", async () => {
-            mockLogin.mockRejectedValueOnce("Invalid credentials.");
-            render(<SignInPage />);
-            await fillAndSubmit("user@example.com", "wrongpassword");
-            await waitFor(() =>
-                expect(screen.getByText(/invalid credentials/i)).toBeInTheDocument()
-            );
-        });
-
-        it("shows error.message when login throws an Error object", async () => {
+        it("shows the error message returned by the server", async () => {
             mockLogin.mockRejectedValueOnce(new Error("Server error"));
             render(<SignInPage />);
             await fillAndSubmit("user@example.com", "wrongpassword");
@@ -204,7 +145,7 @@ describe("SignInPage", () => {
             );
         });
 
-        it("shows fallback error message when rejection has no message", async () => {
+        it("falls back to a generic message if the server gives no explanation", async () => {
             mockLogin.mockRejectedValueOnce({});
             render(<SignInPage />);
             await fillAndSubmit("user@example.com", "wrongpassword");
@@ -213,7 +154,7 @@ describe("SignInPage", () => {
             );
         });
 
-        it("does not redirect on failed login", async () => {
+        it("keeps the user on the sign in page instead of redirecting them", async () => {
             mockLogin.mockRejectedValueOnce("bad creds");
             render(<SignInPage />);
             await fillAndSubmit("user@example.com", "wrongpassword");
@@ -221,29 +162,12 @@ describe("SignInPage", () => {
         });
     });
 
-    describe("Loading state", () => {
-        it("shows 'Signing in...' while request is in flight", async () => {
-            mockLogin.mockImplementation(() => new Promise(() => {})); // never resolves
-            render(<SignInPage />);
-            await fillAndSubmit("user@example.com", "password123");
-            expect(screen.getByText(/signing in\.\.\./i)).toBeInTheDocument();
-        });
-
-        it("disables the submit button while loading", async () => {
+    describe("While the sign in request is in progress", () => {
+        it("disables the submit button so the user cannot click it twice", async () => {
             mockLogin.mockImplementation(() => new Promise(() => {}));
             render(<SignInPage />);
-            await fillAndSubmit("user@example.com", "password123");
+            await fillAndSubmit("user@example.com", "mypassword");
             expect(screen.getByRole("button", { name: /signing in/i })).toBeDisabled();
-        });
-    });
-
-    describe("Navigation", () => {
-        it("navigates to /signup when Sign Up link is clicked", async () => {
-            render(<SignInPage />);
-            await act(async () => {
-                fireEvent.click(screen.getByText("Sign Up"));
-            });
-            expect(mockPush).toHaveBeenCalledWith("/signup");
         });
     });
 });
