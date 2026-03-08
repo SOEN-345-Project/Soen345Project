@@ -51,7 +51,7 @@ beforeEach(() => {
     Storage.prototype.clear = jest.fn();
 });
 
-test("redirects to /signin when there is no token", async () => {
+test("redirects to /signin when there is no user that has sign in", async () => {
     Storage.prototype.getItem = jest.fn(() => null);
     render(<EventsPage />);
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/signin"));
@@ -65,10 +65,11 @@ test("logout clears the session and sends the user to /signin", async () => {
     expect(mockPush).toHaveBeenCalledWith("/signin");
 });
 
-test("shows event cards once the fetch completes", async () => {
+test("shows event cards once the fetch completes (Happy path)", async () => {
     render(<EventsPage />);
     await screen.findByText("Jazz Night");
     expect(screen.getByText("Champions Cup")).toBeInTheDocument();
+    expect(screen.getByText("Jazz Night")).toBeInTheDocument();
 });
 
 test("shows an error message when the fetch fails", async () => {
@@ -77,7 +78,7 @@ test("shows an error message when the fetch fails", async () => {
     await screen.findByText(/network error/i);
 });
 
-test("trims the keyword before calling the search API", async () => {
+test("Trims the keyword before calling the search API", async () => {
     (searchEvents as jest.Mock).mockResolvedValue([MOCK_EVENTS[0]]);
     render(<EventsPage />);
     await screen.findByText("Jazz Night");
@@ -120,7 +121,14 @@ test("does not call the search API when the keyword is blank", async () => {
     expect(searchEvents).not.toHaveBeenCalled();
 });
 
-test("passes the selected category to the filter API", async () => {
+test("Call the filter API when the keyword is blank", async () => {
+    render(<EventsPage />);
+    await screen.findByText("Jazz Night");
+    fireEvent.click(screen.getByRole("button", { name: /^filter$/i }));
+    expect(filterEvents as jest.Mock).toHaveBeenCalled();
+});
+
+test("passes the selected category to the filter API (Happy path)", async () => {
     (filterEvents as jest.Mock).mockResolvedValue([MOCK_EVENTS[0]]);
     render(<EventsPage />);
     await screen.findByText("Jazz Night");
@@ -130,6 +138,18 @@ test("passes the selected category to the filter API", async () => {
 
     await waitFor(() =>
         expect(filterEvents).toHaveBeenCalledWith(expect.objectContaining({ categoryId: 1 }))
+    );
+});
+test("passes the selected category to the filter API which is invalid", async () => {
+    (filterEvents as jest.Mock).mockResolvedValue([]);
+    render(<EventsPage />);
+    await screen.findByText("Jazz Night");
+
+    fireEvent.change(screen.getAllByRole("combobox")[0], { target: { value: "1" } });
+    fireEvent.click(screen.getByRole("button", { name: /^filter$/i }));
+
+    await waitFor(() =>
+        expect(filterEvents).not.toHaveBeenCalledWith(expect.not.objectContaining({ categoryId: 1 }))
     );
 });
 
