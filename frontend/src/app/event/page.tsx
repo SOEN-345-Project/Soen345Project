@@ -1,23 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-interface Event {
-    id: string;
-    name: string;
-    date: string;
-    location: string;
-    category: string;
-    isActive: boolean;
-}
+import { getAllEvents, searchEvents, filterEvents, EventDto, EventFilterParams } from "@/lib/axios";
 
-const categoryConfig: Record<string, { emoji: string; textColor: string; bgColor: string }> = {
-    Music:      { emoji: "🎵", textColor: "text-amber-700",  bgColor: "bg-amber-50"  },
-    Food:       { emoji: "🍽️", textColor: "text-red-700",    bgColor: "bg-red-50"    },
-    Art:        { emoji: "🎨", textColor: "text-violet-700", bgColor: "bg-violet-50" },
-    Technology: { emoji: "⚡", textColor: "text-sky-700",    bgColor: "bg-sky-50"    },
-};
-const fallback = { emoji: "📅", textColor: "text-slate-600", bgColor: "bg-slate-50" };
+const toJavaDateTime = (date: string): string =>
+    new Date(date).toISOString().slice(0, 19);
 
 const formatDate = (iso: string) => {
     const d = new Date(iso);
@@ -25,63 +13,133 @@ const formatDate = (iso: string) => {
         day:   d.toLocaleDateString("en-US", { day: "2-digit" }),
         month: d.toLocaleDateString("en-US", { month: "short" }).toUpperCase(),
         full:  d.toLocaleDateString("en-US", { weekday: "short", month: "long", day: "numeric" }),
+        time:  d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
     };
 };
+
+const CATEGORY_COLORS: Record<string, { dot: string; text: string; bg: string; border: string }> = {
+    "Concert": { dot: "bg-violet-400", text: "text-violet-600", bg: "bg-violet-50", border: "border-violet-200" },
+    "Movie": { dot: "bg-rose-400",   text: "text-rose-600",   bg: "bg-rose-50",   border: "border-rose-200"   },
+    "Sports": { dot: "bg-green-400",  text: "text-green-600",  bg: "bg-green-50",  border: "border-green-200"  },
+    "Theatre": { dot: "bg-amber-400",  text: "text-amber-600",  bg: "bg-amber-50",  border: "border-amber-200"  },
+    "Festival": { dot: "bg-orange-400", text: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200" },
+};
+
+const CATEGORY_OPTIONS = [
+    { id: 1, name: "Concert" },
+    { id: 2, name: "Movie" },
+    { id: 3, name: "Sports" },
+    { id: 4, name: "Theatre" },
+    { id: 5, name: "Festival" },
+];
+const LOCATION_OPTIONS = [
+    { id: 1, name: "Bell Centre" },
+    { id: 2, name: "Place des Arts" },
+    { id: 3, name: "Olympic Stadium" },
+    { id: 4, name: "MTELUS" },
+    { id: 5, name: "Scotiabank Arena" },
+];
 
 const EventsPage = () => {
     const router = useRouter();
 
-    useEffect(() => {
-        if (sessionStorage.getItem("token") === null) {
-            router.push("/signin");
-        }
-    }, []);
-
-    const allEvents: Event[] = [
-        { id: "1", name: "Rock Concert",    date: "2026-03-20", location: "Montreal",  category: "Music",      isActive: true  },
-        { id: "2", name: "Food Festival",   date: "2026-03-25", location: "Toronto",   category: "Food",       isActive: true  },
-        { id: "3", name: "Art Expo",        date: "2026-04-01", location: "Montreal",  category: "Art",        isActive: false },
-        { id: "4", name: "Tech Conference", date: "2026-04-10", location: "Vancouver", category: "Technology", isActive: true  },
-    ];
-
-    const [events, setEvents]                 = useState<Event[]>([]);
-    const [search, setSearch]                 = useState("");
-    const [filters, setFilters]               = useState({ date: "", location: "", category: "" });
-    const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
+    const [allEvents, setAllEvents]           = useState<EventDto[]>([]);
+    const [displayEvents, setDisplayEvents]   = useState<EventDto[]>([]);
+    const [categories, setCategories]         = useState<string[]>(["All"]);
+    const [keyword, setKeyword]               = useState("");
+    const [startDate, setStartDate]           = useState("");
+    const [endDate, setEndDate]               = useState("");
+    const [categoryId, setCategoryId]         = useState<number | undefined>(undefined);
+    const [locationId, setLocationId]         = useState<number | undefined>(undefined);
     const [activeCategory, setActiveCategory] = useState("All");
+    const [loading, setLoading]               = useState(false);
+    const [error, setError]                   = useState<string | null>(null);
 
-    const categories = ["All", ...Array.from(new Set(allEvents.map((e) => e.category)))];
-
-    useEffect(() => {
-        const active = allEvents.filter((e) => e.isActive);
-        setEvents(active);
-        setFilteredEvents(active);
+    const loadAll = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const events = await getAllEvents();
+            setAllEvents(events);
+            setDisplayEvents(events);
+            const cats = ["All", ...Array.from(new Set(events.map((e) => e.categoryName).filter(Boolean)))];
+            setCategories(cats);
+        } catch (err: any) {
+            setError(err?.toString() ?? "Failed to load events.");
+        } finally {
+            setLoading(false);
+        }
     }, []);
 
-    const runFilter = (overrideCat?: string) => {
-        let temp = events;
-        const cat = overrideCat ?? activeCategory;
-
-        if (search) {
-            const kw = search.toLowerCase();
-            temp = temp.filter(
-                (e) =>
-                    e.name.toLowerCase().includes(kw) ||
-                    e.location.toLowerCase().includes(kw) ||
-                    e.category.toLowerCase().includes(kw)
-            );
+    useEffect(() => {
+        if (!sessionStorage.getItem("token")) {
+            router.push("/signin");
+            return;
         }
-        if (filters.date)     temp = temp.filter((e) => e.date === filters.date);
-        if (filters.location) temp = temp.filter((e) => e.location.toLowerCase().includes(filters.location.toLowerCase()));
-        if (filters.category) temp = temp.filter((e) => e.category.toLowerCase().includes(filters.category.toLowerCase()));
-        if (cat !== "All")    temp = temp.filter((e) => e.category === cat);
+        loadAll();
+    }, []);
 
-        setFilteredEvents(temp);
+    const handleSearch = async () => {
+        if (!keyword.trim()) {
+            setDisplayEvents(
+                activeCategory === "All"
+                    ? allEvents
+                    : allEvents.filter((e) => e.categoryName === activeCategory)
+            );
+            return;
+        }
+        setLoading(true);
+        setError(null);
+        try {
+            const events = await searchEvents(keyword.trim());
+            setDisplayEvents(
+                activeCategory === "All"
+                    ? events
+                    : events.filter((e) => e.categoryName === activeCategory)
+            );
+        } catch (err: any) {
+            setError(err?.toString() ?? "Search failed.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleFilter = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const params: EventFilterParams = {
+                ...(categoryId && { categoryId }),
+                ...(locationId && { locationId }),
+                ...(startDate  && { startDate: toJavaDateTime(startDate) }),
+                ...(endDate    && { endDate:   toJavaDateTime(endDate)   }),
+            };
+            const events = await filterEvents(params);
+            setDisplayEvents(events);
+        } catch (err: any) {
+            setError(err?.toString() ?? "Filter failed.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleCategoryClick = (cat: string) => {
         setActiveCategory(cat);
-        runFilter(cat);
+        setDisplayEvents(
+            cat === "All"
+                ? allEvents
+                : allEvents.filter((e) => e.categoryName === cat)
+        );
+    };
+
+    const handleReset = () => {
+        setKeyword("");
+        setStartDate("");
+        setEndDate("");
+        setCategoryId(undefined);
+        setLocationId(undefined);
+        setActiveCategory("All");
+        setDisplayEvents(allEvents);
     };
 
     const inputClass =
@@ -94,64 +152,99 @@ const EventsPage = () => {
                 <header className="py-14 border-b border-stone-200 mb-10">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-xs tracking-widest uppercase text-stone-400 font-medium mb-2">Discover &amp; Explore</p>
+                            <p className="text-xs tracking-widest uppercase text-stone-400 font-medium mb-2">
+                                Discover &amp; Explore
+                            </p>
                             <h1 className="text-4xl font-bold text-stone-900 tracking-tight">Available Events</h1>
                             <p className="mt-2 text-sm text-stone-400 font-light">
-                                {filteredEvents.length} event{filteredEvents.length !== 1 ? "s" : ""} found
+                                {loading
+                                    ? "Loading..."
+                                    : `${displayEvents.length} event${displayEvents.length !== 1 ? "s" : ""} found`}
                             </p>
                         </div>
                         <button
-                            onClick={() => {
-                                sessionStorage.clear();
-                                router.push("/signin");
-                            }}
-                            className="px-4 py-2 bg-red-700 text-white text-sm font-medium rounded-lg hover:bg-stone-700 active:scale-95 transition-all"
+                            onClick={() => { sessionStorage.clear(); router.push("/signin"); }}
+                            className="px-4 py-2 bg-red-700 text-white text-sm font-medium rounded-lg hover:bg-red-800 active:scale-95 transition-all"
                         >
                             Logout
                         </button>
                     </div>
                 </header>
 
-                {/* Search & Filters */}
-                <div className="flex flex-wrap gap-2 mb-5">
+                {error && (
+                    <div className="mb-6 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                        {error}
+                    </div>
+                )}
+
+                <div className="flex gap-2 mb-3 max-w-lg mx-auto">
                     <input
-                        className={`${inputClass} flex-1 min-w-48`}
+                        className={`${inputClass} w-full`}
                         type="text"
-                        placeholder="Search by keyword…"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && runFilter()}
-                    />
-                    <input
-                        className={`${inputClass} w-36`}
-                        type="date"
-                        value={filters.date}
-                        onChange={(e) => setFilters({ ...filters, date: e.target.value })}
-                    />
-                    <input
-                        className={`${inputClass} w-32`}
-                        type="text"
-                        placeholder="Location"
-                        value={filters.location}
-                        onChange={(e) => setFilters({ ...filters, location: e.target.value })}
-                    />
-                    <input
-                        className={`${inputClass} w-32`}
-                        type="text"
-                        placeholder="Category"
-                        value={filters.category}
-                        onChange={(e) => setFilters({ ...filters, category: e.target.value })}
+                        placeholder="Search by keyword..."
+                        value={keyword}
+                        onChange={(e) => setKeyword(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                     />
                     <button
-                        onClick={() => runFilter()}
-                        className="bg-stone-900 text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-stone-700 active:scale-95 transition-all"
+                        onClick={handleSearch}
+                        disabled={loading}
+                        className="bg-stone-900 text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-stone-700 active:scale-95 transition-all disabled:opacity-100"
                     >
                         Search
                     </button>
                 </div>
 
-                {/* Category Pills */}
-                <div className="flex flex-wrap gap-2 mb-10">
+                <div className="flex flex-wrap gap-2 mb-5 justify-center">
+                    <select
+                        className={`${inputClass} w-40`}
+                        value={categoryId ?? ""}
+                        onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : undefined)}
+                    >
+                        <option value="">All Categories</option>
+                        {CATEGORY_OPTIONS.map((c) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                    </select>
+                    <select
+                        className={`${inputClass} w-44`}
+                        value={locationId ?? ""}
+                        onChange={(e) => setLocationId(e.target.value ? Number(e.target.value) : undefined)}
+                    >
+                        <option value="">All Locations</option>
+                        {LOCATION_OPTIONS.map((l) => (
+                            <option key={l.id} value={l.id}>{l.name}</option>
+                        ))}
+                    </select>
+                    <input
+                        className={`${inputClass} w-40`}
+                        type="date"
+                        title="Start date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                    />
+                    <input
+                        className={`${inputClass} w-40`}
+                        type="date"
+                        title="End date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                    />
+                    <button
+                        onClick={handleFilter}
+                        disabled={loading}
+                        className="bg-stone-700 text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-stone-600 active:scale-95 transition-all disabled:opacity-100">
+                        Filter
+                    </button>
+                    <button
+                        onClick={handleReset}
+                        className="text-red-500 text-sm px-3 py-2 rounded-lg hover:text-red-700 transition-colors"
+                    >
+                        Reset
+                    </button>
+                </div>
+
+                <div className="flex flex-wrap gap-2 mb-10 justify-center">
                     {categories.map((cat) => (
                         <button
                             key={cat}
@@ -162,53 +255,58 @@ const EventsPage = () => {
                                     : "bg-white text-stone-500 border-stone-200 hover:border-stone-400 hover:text-stone-800"
                             }`}
                         >
-                            {cat !== "All" && categoryConfig[cat]?.emoji ? `${categoryConfig[cat].emoji} ` : ""}
                             {cat}
                         </button>
                     ))}
                 </div>
 
-                {/* Grid */}
-                {filteredEvents.length === 0 ? (
+                {loading ? (
                     <div className="text-center py-24 text-stone-300">
-                        <p className="text-4xl mb-3">🔍</p>
+                        <p className="text-sm font-light">Loading events...</p>
+                    </div>
+                ) : displayEvents.length === 0 ? (
+                    <div className="text-center py-24 text-stone-300">
                         <p className="text-sm font-light">No events found. Try adjusting your filters.</p>
                     </div>
                 ) : (
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {filteredEvents.map((ev) => {
-                            const cfg = categoryConfig[ev.category] ?? fallback;
-                            const dt  = formatDate(ev.date);
+                        {displayEvents.map((ev) => {
+                            const dt = formatDate(ev.eventDate);
+                            const cat = CATEGORY_COLORS[ev.categoryName] ?? { dot: "bg-stone-400", text: "text-stone-600", bg: "bg-stone-50", border: "border-stone-200" };
                             return (
                                 <div
                                     key={ev.id}
-                                    className="bg-white border border-stone-200 rounded-2xl p-6 flex flex-col hover:shadow-md hover:-translate-y-0.5 hover:border-stone-300 transition-all duration-200 group"
+                                    className="bg-white border border-stone-200 rounded-2xl p-6 flex flex-col hover:shadow-md hover:-translate-y-0.5 hover:border-stone-300 transition-all duration-200 group cursor-pointer"
                                 >
-                                    {/* Top row */}
                                     <div className="flex items-start justify-between mb-5">
-                                        {/* Date badge */}
                                         <div className="flex flex-col items-center bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 leading-none gap-0.5">
                                             <span className="text-xl font-bold text-stone-900">{dt.day}</span>
                                             <span className="text-[9px] tracking-widest text-stone-400 uppercase font-medium">{dt.month}</span>
                                         </div>
-                                        {/* Category badge */}
-                                        <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${cfg.bgColor} ${cfg.textColor}`}>
-                                            {cfg.emoji} {ev.category}
+                                        <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${cat.bg} ${cat.text} ${cat.border}`}>
+                                            <span className={`w-1.5 h-1.5 rounded-full ${cat.dot}`} />
+                                            {ev.categoryName}
                                         </span>
                                     </div>
 
-                                    {/* Name */}
-                                    <h2 className="text-lg font-semibold text-stone-900 mb-3 leading-snug">{ev.name}</h2>
+                                    <h2 className="text-lg font-semibold text-stone-900 mb-1 leading-snug">{ev.title}</h2>
 
-                                    {/* Location */}
-                                    <div className="flex items-center gap-2 text-stone-400 text-xs font-light">
-                                        <span>📍</span>
-                                        <span>{ev.location}</span>
-                                    </div>
+                                    {ev.description && (
+                                        <p className="text-xs text-stone-400 font-light mb-3 line-clamp-2">{ev.description}</p>
+                                    )}
 
-                                    {/* Footer */}
+                                    <p className="text-stone-400 text-xs font-light">
+                                        {[ev.locationName, ev.city].filter(Boolean).join(", ")}
+                                    </p>
+
+                                    {ev.totalTickets != null && (
+                                        <p className="text-stone-400 text-xs font-light mt-1">
+                                            {ev.totalTickets} tickets available
+                                        </p>
+                                    )}
+
                                     <div className="mt-5 pt-4 border-t border-stone-100 flex items-center justify-between">
-                                        <span className="text-xs text-stone-300">{dt.full}</span>
+                                        <span className="text-xs text-stone-300">{dt.full} · {dt.time}</span>
                                         <div className="w-6 h-6 rounded-full bg-stone-100 flex items-center justify-center text-xs text-stone-400 group-hover:bg-stone-900 group-hover:text-white transition-all">
                                             →
                                         </div>
