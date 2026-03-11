@@ -1,0 +1,21 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 50%
+        threshold: 5%
+    patch:
+      default:
+        target: 50%
+
+comment:
+  layout: "reach, diff, flags, files"
+  behavior: default
+  require_changes: false
+
+ignore:
+  - "backend/src/test/**"
+  - "backend/src/main/java/com/soen345/project/ProjectApplication.java"
+  - "backend/src/main/java/com/soen345/project/config/**"
+  - "backend/src/main/java/com/soen345/project/dto/**"
+  - "backend/src/main/java/com/soen345/project/model/**"
