@@ -1,24 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { EventDto } from "@/lib/axios";
+import { EventDto, ReservationRequest, createReservation } from "@/lib/axios";
 
 const formatDate = (iso: string) => {
     const d = new Date(iso);
     return {
         full: d.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
         time: d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
-        day: d.toLocaleDateString("en-US", { day: "2-digit" }),
-        month: d.toLocaleDateString("en-US", { month: "short" }).toUpperCase(),
     };
-};
-
-const CATEGORY_COLORS: Record<string, { dot: string; text: string; bg: string; border: string }> = {
-    Concert:  { dot: "bg-violet-400", text: "text-violet-600", bg: "bg-violet-50",  border: "border-violet-200" },
-    Movie:    { dot: "bg-rose-400",   text: "text-rose-600",   bg: "bg-rose-50",    border: "border-rose-200"   },
-    Sports:   { dot: "bg-green-400",  text: "text-green-600",  bg: "bg-green-50",   border: "border-green-200"  },
-    Theatre:  { dot: "bg-amber-400",  text: "text-amber-600",  bg: "bg-amber-50",   border: "border-amber-200"  },
-    Festival: { dot: "bg-orange-400", text: "text-orange-600", bg: "bg-orange-50",  border: "border-orange-200" },
 };
 
 interface ReservationModalProps {
@@ -51,15 +41,18 @@ export default function ReservationModal({ event, onClose, onConfirm }: Reservat
     if (!event) return null;
 
     const dt = formatDate(event.eventDate);
-    const cat = CATEGORY_COLORS[event.categoryName] ?? { dot: "bg-stone-400", text: "text-stone-600", bg: "bg-stone-50", border: "border-stone-200" };
     const maxTickets = event.totalTickets ?? 10;
 
     const handleConfirm = async () => {
-
+        const request: ReservationRequest = {
+            eventId: event.id,
+            quantity: ticketCount,
+        };
         setStatus("loading");
         setErrorMsg("");
         try {
-            await onConfirm(event.id, ticketCount);
+            const response = await createReservation(String(sessionStorage.getItem('token')), request);
+            console.log(response);
             setStatus("success");
         } catch (err: any) {
             setErrorMsg(err?.message ?? "Something went wrong. Please try again.");
@@ -71,112 +64,60 @@ export default function ReservationModal({ event, onClose, onConfirm }: Reservat
         <div
             ref={overlayRef}
             onClick={(e) => { if (e.target === overlayRef.current && status !== "loading") onClose(); }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+            style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backgroundColor: "rgba(0,0,0,0.5)" }}
         >
-            <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div style={{ width: "100%", maxWidth: 440, backgroundColor: "#fff", borderRadius: 8, border: "1px solid #e5e7eb", padding: 24 }}>
 
-                <div className={`h-1 w-full ${cat.dot}`} />
-
-                <div className="px-6 pt-6 pb-4 border-b border-stone-100 flex items-start justify-between gap-4">
-                    <div className="flex flex-col items-center bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 shrink-0">
-                        <span className="text-2xl font-bold text-stone-900">{dt.day}</span>
-                        <span className="text-[9px] tracking-widest text-stone-400 uppercase font-semibold">{dt.month}</span>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+                    <div>
+                        <p style={{ fontSize: 11, color: "#6b7280", marginBottom: 4 }}>{event.categoryName}</p>
+                        <h2 style={{ fontSize: 17, fontWeight: 600, color: "#111827", margin: 0 }}>{event.title}</h2>
+                        {event.description && <p style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>{event.description}</p>}
                     </div>
-
-                    <div className="flex-1 min-w-0">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border mb-1 ${cat.bg} ${cat.text} ${cat.border}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${cat.dot}`} />
-                            {event.categoryName}
-                        </span>
-                        <h2 className="text-lg font-semibold text-stone-900 truncate">{event.title}</h2>
-                        {event.description && (
-                            <p className="text-xs text-stone-400 mt-1 line-clamp-2">{event.description}</p>
-                        )}
-                    </div>
-
-                    <button
-                        onClick={onClose}
-                        disabled={status === "loading"}
-                        className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-stone-400 hover:bg-stone-200 transition-colors disabled:opacity-40"
-                    >
-                        ✕
-                    </button>
+                    <button onClick={onClose} disabled={status === "loading"} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#6b7280" }}>✕</button>
                 </div>
 
-                <div className="px-6 py-4 space-y-2 border-b border-stone-100">
-                    <InfoRow label="Date & Time" value={`${dt.full} · ${dt.time}`} />
+                <div style={{ borderTop: "1px solid #e5e7eb", borderBottom: "1px solid #e5e7eb", paddingBlock: 12, marginBottom: 16, fontSize: 13, color: "#6b7280" }}>
+                    <p style={{ margin: "0 0 4px" }}><strong>Date:</strong> {dt.full} · {dt.time}</p>
                     {(event.locationName || event.city) && (
-                        <InfoRow label="Location" value={[event.locationName, event.city].filter(Boolean).join(", ")} />
+                        <p style={{ margin: "0 0 4px" }}><strong>Location:</strong> {[event.locationName, event.city].filter(Boolean).join(", ")}</p>
                     )}
                     {event.totalTickets != null && (
-                        <InfoRow label="Available tickets" value={`${event.totalTickets}`} />
+                        <p style={{ margin: 0 }}><strong>Available:</strong> {event.totalTickets} tickets</p>
                     )}
                 </div>
 
-                <div className="px-6 py-5">
-                    {status === "success" ? (
-                        <div className="bg-green-50 border border-green-200 rounded-xl p-5 text-center">
-                            <p className="text-sm font-semibold text-green-800 mb-1">Reservation confirmed!</p>
-                            <p className="text-xs text-green-600 mb-4">
-                                {ticketCount} ticket{ticketCount !== 1 ? "s" : ""} successfully reserved.
-                            </p>
-                            <button onClick={onClose} className="w-full py-2.5 rounded-lg bg-green-700 text-white text-sm font-medium hover:bg-green-800 transition-colors">
-                                Done
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm text-stone-700 font-medium">Number of tickets</span>
-                                <div className="flex items-center gap-3">
-                                    <button
-                                        onClick={() => setTicketCount((n) => Math.max(1, n - 1))}
-                                        disabled={ticketCount <= 1 || status === "loading"}
-                                        className="w-8 h-8 rounded-full border border-stone-200 bg-white flex items-center justify-center text-stone-600 hover:border-stone-400 disabled:opacity-30 transition-colors"
-                                    >
-                                        −
-                                    </button>
-                                    <span className="w-5 text-center text-lg font-semibold text-stone-900 tabular-nums">{ticketCount}</span>
-                                    <button
-                                        onClick={() => setTicketCount((n) => Math.min(maxTickets, n + 1))}
-                                        disabled={ticketCount >= maxTickets || status === "loading"}
-                                        className="w-8 h-8 rounded-full border border-stone-200 bg-white flex items-center justify-center text-stone-600 hover:border-stone-400 disabled:opacity-30 transition-colors"
-                                    >
-                                        +
-                                    </button>
-                                </div>
+                {status === "success" ? (
+                    <div style={{ textAlign: "center" }}>
+                        <p style={{ color: "#15803d", fontWeight: 600, marginBottom: 4 }}>Reservation confirmed!</p>
+                        <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 16 }}>{ticketCount} ticket{ticketCount !== 1 ? "s" : ""} successfully reserved.</p>
+                        <button onClick={onClose} style={{ width: "100%", padding: "8px 0", backgroundColor: "#15803d", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 14 }}>Done</button>
+                    </div>
+                ) : (
+                    <div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                            <span style={{ fontSize: 14, color: "#374151" }}>Number of tickets</span>
+                            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                <button onClick={() => setTicketCount((n) => Math.max(1, n - 1))} disabled={ticketCount <= 1 || status === "loading"} style={{ width: 28, height: 28, border: "1px solid #111827", borderRadius: "50%", background: "#fff", cursor: "pointer", fontSize: 16, color: "#111827" }}>−</button>
+                                <span style={{ fontSize: 16, fontWeight: 600, minWidth: 20, textAlign: "center", color: "#111827" }}>{ticketCount}</span>
+                                <button onClick={() => setTicketCount((n) => Math.min(maxTickets, n + 1))} disabled={ticketCount >= maxTickets || status === "loading"} style={{ width: 28, height: 28, border: "1px solid #111827", borderRadius: "50%", background: "#fff", cursor: "pointer", fontSize: 16, color: "#111827" }}>+</button>
                             </div>
-
-                            {status === "error" && errorMsg && (
-                                <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                                    {errorMsg}
-                                </p>
-                            )}
-
-                            <button
-                                onClick={handleConfirm}
-                                disabled={status === "loading"}
-                                className="w-full py-3 rounded-xl bg-stone-900 text-white text-sm font-medium hover:bg-stone-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
-                            >
-                                {status === "loading" ? (
-                                    <>
-                                        Confirming…
-                                    </>
-                                ) : (
-                                    `Reserve ${ticketCount} ticket${ticketCount !== 1 ? "s" : ""}`
-                                )}
-                            </button>
                         </div>
-                    )}
-                </div>
+
+                        {status === "error" && errorMsg && (
+                            <p style={{ fontSize: 13, color: "#dc2626", marginBottom: 12 }}>{errorMsg}</p>
+                        )}
+
+                        <button
+                            onClick={handleConfirm}
+                            disabled={status === "loading"}
+                            style={{ width: "100%", padding: "9px 0", backgroundColor: "#111827", color: "#fff", border: "none", borderRadius: 6, cursor: status === "loading" ? "not-allowed" : "pointer", fontSize: 14, opacity: status === "loading" ? 0.6 : 1 }}
+                        >
+                            {status === "loading" ? "Confirming…" : `Reserve ${ticketCount} ticket${ticketCount !== 1 ? "s" : ""}`}
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );
 }
-
-const InfoRow = ({ label, value }: { label: string; value: string }) => (
-    <div>
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-500 mb-0.5">{label}</p>
-        <p className="text-sm text-stone-600">{value}</p>
-    </div>
-);
