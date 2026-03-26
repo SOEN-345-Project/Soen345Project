@@ -3,6 +3,7 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 
+
 jest.mock("next/navigation", () => ({
     useRouter: () => ({ push: mockPush }),
 }));
@@ -49,6 +50,21 @@ beforeEach(() => {
 
     Storage.prototype.getItem = jest.fn((key) => (key === "token" ? "mock-token" : null));
     Storage.prototype.clear = jest.fn();
+});
+
+
+test("verifying that the event page loads correctly ", async () => {
+    render(<EventsPage />);
+    await waitFor(() =>  expect(screen.getByText("Available Events")).toBeInTheDocument());
+});
+
+test("shows no events message when empty", async () => {
+    (getAllEvents as jest.Mock).mockResolvedValue([]);
+    render(<EventsPage />);
+
+    const message = await screen.findByText(/no events found/i);
+
+    expect(message).toBeInTheDocument();
 });
 
 test("redirects to /signin when there is no user that has sign in", async () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import {useEffect, useEffectEvent, useState} from "react";
 import { useRouter } from "next/navigation";
 import { login } from "@/lib/axios";
 
@@ -14,6 +14,9 @@ const SignInPage = () => {
     const [loading, setLoading] = useState(false);
 
     const isPhone = (value: string) => /^[\d\s\+\-\(\)]{7,}$/.test(value.trim());
+    useEffect(() => {
+        sessionStorage.clear();
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();

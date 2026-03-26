@@ -19,3 +19,6 @@ ignore:
   - "backend/src/main/java/com/soen345/project/config/**"
   - "backend/src/main/java/com/soen345/project/dto/**"
   - "backend/src/main/java/com/soen345/project/model/**"
+  - "frontend/src/lib/**"
+  - "frontend/src/app/page.tsx"
+  - "frontend/src/app/layout.tsx"

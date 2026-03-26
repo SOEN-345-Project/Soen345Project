@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import {useEffect, useState} from "react";
 import { useRouter } from "next/navigation";
 import { signup, verify, resendCode } from "@/lib/axios";
 
@@ -50,6 +50,9 @@ const SignUpPage = () => {
             setLoading(false);
         }
     };
+    useEffect(() => {
+        sessionStorage.clear();
+    }, []);
 
     const handleVerify = async () => {
         setVerifyError("");

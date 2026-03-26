@@ -39,9 +39,38 @@ jobs:
           name: codecov-umbrella
           fail_ci_if_error: true
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+            node-version: '22'
+            cache: 'npm'
+            cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: ./frontend
+
+      - name: Run frontend tests with coverage
+        run: npm test -- --coverage --watchAll=false
+        working-directory: ./frontend
+
+      - name: Upload frontend coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./frontend/coverage/lcov.info
+          flags: frontend
+          name: codecov-frontend
+          fail_ci_if_error: true
+
      # - name: Check code coverage
      #   run: mvn jacoco:check --file backend/pom.xml
-
+      - name: Archive frontend coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage-report
+          path: frontend/coverage/
       - name: Archive test results
         if: always()
         uses: actions/upload-artifact@v4
