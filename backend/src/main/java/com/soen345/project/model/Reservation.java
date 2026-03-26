@@ -24,7 +24,7 @@ public class Reservation {
     @Column(name = "event_id", nullable = false)
     private Long eventId;
 
-    @Column(nullable = false)
+    @Column(name = "ticket_quantity")
     private Integer quantity;
 
     @Enumerated(EnumType.STRING)
@@ -38,11 +38,11 @@ public class Reservation {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         if (status == null) {
-            status = ReservationStatus.ACTIVE;
+            status = ReservationStatus.RESERVED;
         }
     }
 
     public enum ReservationStatus {
-        ACTIVE, CANCELLED
+        RESERVED, CANCELLED
     }
 }

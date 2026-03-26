@@ -1,5 +1,6 @@
 package com.soen345.project.dto;
 
+import com.soen345.project.model.Event;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -18,4 +19,5 @@ public class EventDto {
     private String locationName;
     private String city;
     private Integer totalTickets;
+    private Event.EventStatus status;
 }

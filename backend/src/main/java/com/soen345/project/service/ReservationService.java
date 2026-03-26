@@ -67,7 +67,7 @@ public class ReservationService {
         reservation.setUserId(userId);
         reservation.setEventId(event.getId());
         reservation.setQuantity(request.getQuantity());
-        reservation.setStatus(Reservation.ReservationStatus.ACTIVE);
+        reservation.setStatus(Reservation.ReservationStatus.RESERVED);
 
         Reservation saved = reservationRepository.save(reservation);
 
