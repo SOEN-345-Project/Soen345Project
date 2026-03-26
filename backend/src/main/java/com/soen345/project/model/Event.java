@@ -42,8 +42,20 @@ public class Event {
     @Column(name = "created_by")
     private Long createdBy;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private EventStatus status = EventStatus.ACTIVE;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+        if (status == null) {
+            status = EventStatus.ACTIVE;
+        }
     }
+
+    public enum EventStatus {
+        ACTIVE, CANCELLED
+    }
+
 }
