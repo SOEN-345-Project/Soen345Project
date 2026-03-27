@@ -14,10 +14,9 @@ const formatDate = (iso: string) => {
 interface ReservationModalProps {
     event: EventDto | null;
     onClose: () => void;
-    onConfirm: (eventId: number, ticketCount: number) => Promise<void>;
 }
 
-export default function ReservationModal({ event, onClose, onConfirm }: ReservationModalProps) {
+export default function ReservationModal({ event, onClose}: ReservationModalProps) {
     const [ticketCount, setTicketCount] = useState(1);
     const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
     const [errorMsg, setErrorMsg] = useState("");

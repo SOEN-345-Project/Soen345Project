@@ -13,6 +13,13 @@ jest.mock("@/lib/axios", () => ({
     searchEvents: jest.fn(),
     filterEvents: jest.fn(),
 }));
+jest.mock("../reservation/reservation", () => ({
+    __esModule: true,
+    default: ({ event, onClose }: { event: any; onClose: () => void }) => {
+        if (!event) return null;
+        return <div data-testid="mock-reservation-modal"><button onClick={onClose}>Close</button></div>;
+    },
+}));
 
 import { getAllEvents, searchEvents, filterEvents } from "@/lib/axios";
 import EventsPage from "./page";
@@ -55,7 +62,12 @@ beforeEach(() => {
 
 test("verifying that the event page loads correctly ", async () => {
     render(<EventsPage />);
-    await waitFor(() =>  expect(screen.getByText("Available Events")).toBeInTheDocument());
+    await waitFor(() =>
+    {expect(screen.getByText("Available Events")).toBeInTheDocument();
+        expect(screen.getByText("Available Events")).toBeInTheDocument();
+        expect(screen.getByTitle("Start date")).toBeInTheDocument();
+        expect(screen.getByTitle("End date")).toBeInTheDocument();
+    });
 });
 
 test("shows no events message when empty", async () => {
@@ -79,6 +91,13 @@ test("logout clears the session and sends the user to /signin", async () => {
     fireEvent.click(screen.getByRole("button", { name: /logout/i }));
     expect(sessionStorage.clear).toHaveBeenCalled();
     expect(mockPush).toHaveBeenCalledWith("/signin");
+});
+
+test("Reservation sends the user to /reservation", async () => {
+    render(<EventsPage />);
+    await screen.findByText("Jazz Night");
+    fireEvent.click(screen.getByRole("button", { name: /reservation/i }));
+    expect(mockPush).toHaveBeenCalledWith("/reservation");
 });
 
 test("shows event cards once the fetch completes (Happy path)", async () => {
@@ -193,3 +212,14 @@ test("reset brings back all events after filtering", async () => {
     expect(screen.getByText("Jazz Night")).toBeInTheDocument();
     expect(screen.getByText("Champions Cup")).toBeInTheDocument();
 });
+
+test("clicking the arrow button opens the reservation modal", async () => {
+    (getAllEvents as jest.Mock).mockResolvedValue(MOCK_EVENTS);
+    render(<EventsPage />);
+    await screen.findByText("Jazz Night");
+
+    fireEvent.click(screen.getAllByLabelText("Reserve tickets")[0]);
+
+    expect(screen.getByTestId("mock-reservation-modal")).toBeInTheDocument();
+});
+

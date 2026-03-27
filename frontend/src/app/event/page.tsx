@@ -333,7 +333,6 @@ const EventsPage = () => {
             <ReservationModal
                 event={selectedEvent}
                 onClose={() => setSelectedEvent(null)}
-                onConfirm={handleReserve}
             />
         </div>
     );
