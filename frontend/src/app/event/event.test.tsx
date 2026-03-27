@@ -111,6 +111,8 @@ test("shows an error message when the fetch fails", async () => {
     (getAllEvents as jest.Mock).mockRejectedValue(new Error("Network error"));
     render(<EventsPage />);
     await screen.findByText(/network error/i);
+    expect(screen.queryByText("Champions Cup")).not.toBeInTheDocument();
+    expect(screen.queryByText("Jazz Night")).not.toBeInTheDocument();
 });
 
 test("Trims the keyword before calling the search API", async () => {
@@ -148,6 +150,16 @@ test("Search for a particular Event using the search bar and fails due to wrong 
     await waitFor(() => expect(screen.queryByText(/^Champions Cup$/)).not.toBeInTheDocument());
 })
 
+test("Search for a particular Event using the search bar and fails due to network error", async() =>{
+    (searchEvents as jest.Mock).mockRejectedValueOnce(new Error("Network error"));
+    render(<EventsPage />);
+    await screen.findByText("Jazz Night");
+
+    await userEvent.type(screen.getByPlaceholderText(/search by keyword/i), "some");
+    fireEvent.click(screen.getByRole("button", { name: /search$/i }));
+    await waitFor(() => expect(searchEvents).toHaveBeenCalledWith("some"));
+    await screen.findByText(/network error/i);
+})
 
 test("does not call the search API when the keyword is blank", async () => {
     render(<EventsPage />);
@@ -211,6 +223,17 @@ test("reset brings back all events after filtering", async () => {
 
     expect(screen.getByText("Jazz Night")).toBeInTheDocument();
     expect(screen.getByText("Champions Cup")).toBeInTheDocument();
+});
+
+test("reset brings back all events after filterixcedfdeng", async () => {
+    (filterEvents as jest.Mock).mockRejectedValueOnce(new Error("Network Error"))
+    render(<EventsPage />);
+    await screen.findByText("Jazz Night");
+
+    fireEvent.change(screen.getAllByRole("combobox")[0], { target: { value: "1" } });
+    fireEvent.click(screen.getByRole("button", { name: /^filter$/i }));
+    await waitFor(() => expect(filterEvents).toHaveBeenCalled());
+    await screen.findByText(/network error/i);
 });
 
 test("clicking the arrow button opens the reservation modal", async () => {
