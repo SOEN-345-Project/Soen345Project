@@ -1,14 +1,21 @@
-name: Java CI with Maven
+name: CI
 
 on:
   push:
     branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build:
+  backend:
+    name: Backend CI
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout code
@@ -36,15 +43,40 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./backend/target/site/jacoco/jacoco.xml
           flags: unittests
-          name: codecov-umbrella
+          name: codecov-backend
           fail_ci_if_error: true
+
+      - name: Archive test results
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: test-results
+          path: backend/target/surefire-reports/
+          if-no-files-found: ignore
+
+      - name: Archive coverage report
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: coverage-report
+          path: backend/target/site/jacoco/
+          if-no-files-found: ignore
+
+  frontend:
+    name: Frontend CI
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
 
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
-            node-version: '22'
-            cache: 'npm'
-            cache-dependency-path: ./frontend/package-lock.json
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: ./frontend/package-lock.json
 
       - name: Install frontend dependencies
         run: npm ci
@@ -63,24 +95,10 @@ jobs:
           name: codecov-frontend
           fail_ci_if_error: true
 
-     # - name: Check code coverage
-     #   run: mvn jacoco:check --file backend/pom.xml
       - name: Archive frontend coverage report
         if: always()
         uses: actions/upload-artifact@v5
         with:
           name: frontend-coverage-report
           path: frontend/coverage/
-      - name: Archive test results
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: test-results
-          path: backend/target/surefire-reports/
-
-      - name: Archive coverage report
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: coverage-report
-          path: backend/target/site/jacoco/
+          if-no-files-found: ignore
