@@ -12,11 +12,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Filter paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            frontend:
+              - 'frontend/**'
   backend:
     name: Backend CI
     runs-on: ubuntu-latest
     timeout-minutes: 20
-
+    needs: [ changes ]
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || needs.changes.outputs.backend == 'true') }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -66,6 +89,9 @@ jobs:
     name: Frontend CI
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    needs: [changes]
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || needs.changes.outputs.frontend == 'true') }}
+
 
     steps:
       - name: Checkout code
