@@ -3,6 +3,7 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 
+
 jest.mock("next/navigation", () => ({
     useRouter: () => ({ push: mockPush }),
 }));
@@ -11,6 +12,13 @@ jest.mock("@/lib/axios", () => ({
     getAllEvents:  jest.fn(),
     searchEvents: jest.fn(),
     filterEvents: jest.fn(),
+}));
+jest.mock("../reservation/reservation", () => ({
+    __esModule: true,
+    default: ({ event, onClose }: { event: any; onClose: () => void }) => {
+        if (!event) return null;
+        return <div data-testid="mock-reservation-modal"><button onClick={onClose}>Close</button></div>;
+    },
 }));
 
 import { getAllEvents, searchEvents, filterEvents } from "@/lib/axios";
@@ -51,6 +59,26 @@ beforeEach(() => {
     Storage.prototype.clear = jest.fn();
 });
 
+
+test("verifying that the event page loads correctly ", async () => {
+    render(<EventsPage />);
+    await waitFor(() =>
+    {expect(screen.getByText("Available Events")).toBeInTheDocument();
+        expect(screen.getByText("Available Events")).toBeInTheDocument();
+        expect(screen.getByTitle("Start date")).toBeInTheDocument();
+        expect(screen.getByTitle("End date")).toBeInTheDocument();
+    });
+});
+
+test("shows no events message when empty", async () => {
+    (getAllEvents as jest.Mock).mockResolvedValue([]);
+    render(<EventsPage />);
+
+    const message = await screen.findByText(/no events found/i);
+
+    expect(message).toBeInTheDocument();
+});
+
 test("redirects to /signin when there is no user that has sign in", async () => {
     Storage.prototype.getItem = jest.fn(() => null);
     render(<EventsPage />);
@@ -65,6 +93,13 @@ test("logout clears the session and sends the user to /signin", async () => {
     expect(mockPush).toHaveBeenCalledWith("/signin");
 });
 
+test("Reservation sends the user to /reservation", async () => {
+    render(<EventsPage />);
+    await screen.findByText("Jazz Night");
+    fireEvent.click(screen.getByRole("button", { name: /reservation/i }));
+    expect(mockPush).toHaveBeenCalledWith("/reservation");
+});
+
 test("shows event cards once the fetch completes (Happy path)", async () => {
     render(<EventsPage />);
     await screen.findByText("Jazz Night");
@@ -76,6 +111,8 @@ test("shows an error message when the fetch fails", async () => {
     (getAllEvents as jest.Mock).mockRejectedValue(new Error("Network error"));
     render(<EventsPage />);
     await screen.findByText(/network error/i);
+    expect(screen.queryByText("Champions Cup")).not.toBeInTheDocument();
+    expect(screen.queryByText("Jazz Night")).not.toBeInTheDocument();
 });
 
 test("Trims the keyword before calling the search API", async () => {
@@ -113,6 +150,16 @@ test("Search for a particular Event using the search bar and fails due to wrong 
     await waitFor(() => expect(screen.queryByText(/^Champions Cup$/)).not.toBeInTheDocument());
 })
 
+test("Search for a particular Event using the search bar and fails due to network error", async() =>{
+    (searchEvents as jest.Mock).mockRejectedValueOnce(new Error("Network error"));
+    render(<EventsPage />);
+    await screen.findByText("Jazz Night");
+
+    await userEvent.type(screen.getByPlaceholderText(/search by keyword/i), "some");
+    fireEvent.click(screen.getByRole("button", { name: /search$/i }));
+    await waitFor(() => expect(searchEvents).toHaveBeenCalledWith("some"));
+    await screen.findByText(/network error/i);
+})
 
 test("does not call the search API when the keyword is blank", async () => {
     render(<EventsPage />);
@@ -177,3 +224,25 @@ test("reset brings back all events after filtering", async () => {
     expect(screen.getByText("Jazz Night")).toBeInTheDocument();
     expect(screen.getByText("Champions Cup")).toBeInTheDocument();
 });
+
+test("reset brings back all events after filterixcedfdeng", async () => {
+    (filterEvents as jest.Mock).mockRejectedValueOnce(new Error("Network Error"))
+    render(<EventsPage />);
+    await screen.findByText("Jazz Night");
+
+    fireEvent.change(screen.getAllByRole("combobox")[0], { target: { value: "1" } });
+    fireEvent.click(screen.getByRole("button", { name: /^filter$/i }));
+    await waitFor(() => expect(filterEvents).toHaveBeenCalled());
+    await screen.findByText(/network error/i);
+});
+
+test("clicking the arrow button opens the reservation modal", async () => {
+    (getAllEvents as jest.Mock).mockResolvedValue(MOCK_EVENTS);
+    render(<EventsPage />);
+    await screen.findByText("Jazz Night");
+
+    fireEvent.click(screen.getAllByLabelText("Reserve tickets")[0]);
+
+    expect(screen.getByTestId("mock-reservation-modal")).toBeInTheDocument();
+});
+

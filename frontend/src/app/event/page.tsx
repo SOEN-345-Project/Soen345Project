@@ -1,5 +1,5 @@
 "use client";
-
+import ReservationModal from "@/app/reservation/reservation";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getAllEvents, searchEvents, filterEvents, EventDto, EventFilterParams } from "@/lib/axios";
@@ -54,7 +54,10 @@ const EventsPage = () => {
     const [activeCategory, setActiveCategory] = useState("All");
     const [loading, setLoading]               = useState(false);
     const [error, setError]                   = useState<string | null>(null);
-
+    const [selectedEvent, setSelectedEvent] = useState<EventDto | null>(null);
+    const handleReserve = async (eventId: number, ticketCount: number) => {
+       // await createReservation({ eventId, ticketCount }); // replace with your real axios call
+    };
     const loadAll = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -152,22 +155,27 @@ const EventsPage = () => {
                 <header className="py-14 border-b border-stone-200 mb-10">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-xs tracking-widest uppercase text-stone-400 font-medium mb-2">
-                                Discover &amp; Explore
-                            </p>
-                            <h1 className="text-4xl font-bold text-stone-900 tracking-tight">Available Events</h1>
+                            <h1 className="text-4xl font-bold text-stone-900 tracking-tight ">Available Events</h1>
                             <p className="mt-2 text-sm text-stone-400 font-light">
                                 {loading
                                     ? "Loading..."
                                     : `${displayEvents.length} event${displayEvents.length !== 1 ? "s" : ""} found`}
                             </p>
                         </div>
+                        <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => { router.push("/reservation"); }}
+                            className="px-4 py-2 bg-blue-700 text-white text-sm font-medium rounded-lg hover:bg-blue-800 active:scale-95 transition-all"
+                        >
+                            Reservation
+                        </button>
                         <button
                             onClick={() => { sessionStorage.clear(); router.push("/signin"); }}
                             className="px-4 py-2 bg-red-700 text-white text-sm font-medium rounded-lg hover:bg-red-800 active:scale-95 transition-all"
                         >
                             Logout
                         </button>
+                        </div>
                     </div>
                 </header>
 
@@ -307,9 +315,13 @@ const EventsPage = () => {
 
                                     <div className="mt-5 pt-4 border-t border-stone-100 flex items-center justify-between">
                                         <span className="text-xs text-stone-300">{dt.full} · {dt.time}</span>
-                                        <div className="w-6 h-6 rounded-full bg-stone-100 flex items-center justify-center text-xs text-stone-400 group-hover:bg-stone-900 group-hover:text-white transition-all">
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setSelectedEvent(ev); }}
+                                            className="w-6 h-6 rounded-full bg-stone-100 flex items-center justify-center text-xs text-stone-400 group-hover:bg-stone-900 group-hover:text-white transition-all"
+                                            aria-label="Reserve tickets"
+                                        >
                                             →
-                                        </div>
+                                        </button>
                                     </div>
                                 </div>
                             );
@@ -318,6 +330,10 @@ const EventsPage = () => {
                 )}
 
             </div>
+            <ReservationModal
+                event={selectedEvent}
+                onClose={() => setSelectedEvent(null)}
+            />
         </div>
     );
 };

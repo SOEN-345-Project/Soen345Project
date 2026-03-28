@@ -56,6 +56,11 @@ export interface VerifyUserDto {
     verificationCode: string;
 }
 
+export interface ReservationRequest {
+    eventId: number;
+    quantity: number;
+}
+
 export const signup      = async (data: RegisterUserDto): Promise<any> => api.post("/auth/signup", data);
 export const signupAdmin = async (data: RegisterUserDto): Promise<any> => api.post("/auth/signup/admin", data);
 export const login       = async (data: LoginUserDto):   Promise<any> => api.post("/auth/login", data);
@@ -71,5 +76,27 @@ export const searchEvents = async (keyword: string): Promise<EventDto[]> =>
 
 export const filterEvents = async (params: EventFilterParams): Promise<EventDto[]> =>
     api.get("/api/events/filter", { params });
+
+export async function createReservation(accessToken: string, data: ReservationRequest): Promise<any> {
+    const response = await api.post("/api/reservations", data, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    console.log("createReservation response:", response);
+    return response;
+}
+
+export async function getAllReservations(accessToken: string): Promise<any> {
+    const response = await api.get("/api/reservations/my", {
+        headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    return response;
+}
+
+export async function cancelReservation(accessToken: string, reservationId: number): Promise<any> {
+    const response = await api.delete(`/api/reservations/${reservationId}`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    return response;
+}
 
 export default api;
