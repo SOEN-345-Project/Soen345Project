@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: [ changes ]
-    if: ${{ always() && (github.event_name == 'workflow_dispatch' || needs.changes.outputs.backend == 'true') }}
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || needs.changes.outputs.backend == 'true') }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -90,7 +90,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [changes]
-    if: ${{ always() && (github.event_name == 'workflow_dispatch' || needs.changes.outputs.frontend == 'true') }}
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || needs.changes.outputs.frontend == 'true') }}
 
 
     steps:
