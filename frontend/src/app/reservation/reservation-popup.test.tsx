@@ -16,6 +16,7 @@ const mockEvent = {
     locationName: "Théâtre Rialto",
     city: "Montreal",
     totalTickets: 10,
+    status:  "ACTIVE",
 };
 
 const mockOnClose = jest.fn();

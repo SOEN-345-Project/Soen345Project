@@ -2,7 +2,7 @@
 
 import {useEffect, useEffectEvent, useState} from "react";
 import { useRouter } from "next/navigation";
-import { login } from "@/lib/axios";
+import { login,isAdmin } from "@/lib/axios";
 
 const SignInPage = () => {
 
@@ -42,10 +42,15 @@ const SignInPage = () => {
                 setError("Login failed: no token received.");
                 return;
             }
+            const isadmin = await isAdmin();
             sessionStorage.clear();
             sessionStorage.setItem("userLoggedIn", "true");
             sessionStorage.setItem("token", token);
-            router.push("/event");
+            if (isadmin) {sessionStorage.setItem("isAdmin", "true");}
+
+            if(isadmin){
+            router.push("/adminEvent");}
+            else {router.push("/event");}
         } catch (err: any) {
 
             const message =

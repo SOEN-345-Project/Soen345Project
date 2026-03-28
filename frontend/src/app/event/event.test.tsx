@@ -55,12 +55,22 @@ beforeEach(() => {
     (searchEvents as jest.Mock).mockResolvedValue([]);
     (filterEvents as jest.Mock).mockResolvedValue([]);
 
-    Storage.prototype.getItem = jest.fn((key) => (key === "token" ? "mock-token" : null));
+    Storage.prototype.getItem = jest.fn((key: string) => {
+        switch (key) {
+            case "token":
+                return "mock-token";
+            case "isAdmin":
+                return null;
+            default:
+                return null;
+        }
+    });
     Storage.prototype.clear = jest.fn();
 });
 
 
-test("verifying that the event page loads correctly ", async () => {
+
+test("Checking that the page loads correctly", async () => {
     render(<EventsPage />);
     await waitFor(() =>
     {expect(screen.getByText("Available Events")).toBeInTheDocument();
@@ -70,7 +80,7 @@ test("verifying that the event page loads correctly ", async () => {
     });
 });
 
-test("shows no events message when empty", async () => {
+test("Shows no events message when empty", async () => {
     (getAllEvents as jest.Mock).mockResolvedValue([]);
     render(<EventsPage />);
 
@@ -187,6 +197,7 @@ test("passes the selected category to the filter API (Happy path)", async () => 
         expect(filterEvents).toHaveBeenCalledWith(expect.objectContaining({ categoryId: 1 }))
     );
 });
+
 test("passes the selected category to the filter API which is invalid", async () => {
     (filterEvents as jest.Mock).mockResolvedValue([]);
     render(<EventsPage />);

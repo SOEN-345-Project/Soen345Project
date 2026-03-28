@@ -43,7 +43,16 @@ beforeEach(() => {
     jest.clearAllMocks();
     (getAllReservations as jest.Mock).mockResolvedValue(MOCK_RESERVATIONS);
     (cancelReservation as jest.Mock).mockResolvedValue({});
-    Storage.prototype.getItem = jest.fn((key) => (key === "token" ? "mock-token" : null));
+    Storage.prototype.getItem = jest.fn((key: string) => {
+        switch (key) {
+            case "token":
+                return "mock-token";
+            case "isAdmin":
+                return null;
+            default:
+                return null;
+        }
+    });
     Storage.prototype.clear  = jest.fn();
 });
 
