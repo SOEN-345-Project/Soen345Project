@@ -10,7 +10,7 @@ interface Reservation {
     eventDate: string;
     eventLocation: string;
     quantity: number;
-    status: "CONFIRMED" | "PENDING" | "CANCELLED";
+    status: string;
     createdAt: string;
 }
 
@@ -47,6 +47,10 @@ export default function ReservationsList() {
     useEffect(() => {
         if (!sessionStorage.getItem("token")) {
             router.push("/signin");
+        }
+        if (!sessionStorage.getItem("isAdmin") ) {
+            router.push("/adminEvent");
+            return;
         }
     }, []);
 

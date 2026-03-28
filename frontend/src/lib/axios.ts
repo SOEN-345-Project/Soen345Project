@@ -16,6 +16,22 @@ api.interceptors.response.use(
         "Something went wrong"
     )
 );
+export interface UserInfo {
+    id: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+    role: string;
+}
+
+export interface AdminEventRequest {
+    title: string;
+    description?: string;
+    eventDate: string;
+    categoryId: number;
+    locationId: number;
+    totalTickets: number;
+}
 
 export interface EventDto {
     id: number;
@@ -26,6 +42,7 @@ export interface EventDto {
     locationName: string;
     city: string;
     totalTickets: number;
+    status: string;
 }
 
 export interface EventFilterParams {
@@ -97,6 +114,57 @@ export async function cancelReservation(accessToken: string, reservationId: numb
         headers: { Authorization: `Bearer ${accessToken}` }
     });
     return response;
+}
+
+export async function getEveryEvents() : Promise<any> {
+    const token = sessionStorage.getItem("token");
+    const response = await api.get("/api/admin/events", {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    return response;
+};
+
+export async function cancelEvent(eventId: number): Promise<any> {
+    const token = sessionStorage.getItem("token");
+    const response = await api.delete(`/api/admin/events/${eventId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    return response;
+}
+
+export async function createEvent(data: AdminEventRequest): Promise<any> {
+    const token = sessionStorage.getItem("token");
+    const response = await api.post("/api/admin/events", data, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    return response;
+}
+
+export async function updateEvent(eventId: number, data: AdminEventRequest): Promise<any> {
+    const token = sessionStorage.getItem("token");
+    const response = await api.put(`/api/admin/events/${eventId}`, data, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    return response;
+}
+
+export async function getCurrentUser(): Promise<any> {
+    const token = sessionStorage.getItem("token");
+    if (!token) return null;
+    try {
+        const response = await api.get("/api/users/me", {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        return response;
+    } catch (error) {
+        console.error("Failed to fetch current user:", error);
+        return null;
+    }
+}
+
+export async function isAdmin(): Promise<boolean> {
+    const user = await getCurrentUser();
+    return user?.role === "ROLE_ADMIN";
 }
 
 export default api;

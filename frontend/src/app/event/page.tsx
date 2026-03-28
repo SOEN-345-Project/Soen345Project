@@ -75,10 +75,16 @@ const EventsPage = () => {
     }, []);
 
     useEffect(() => {
-        if (!sessionStorage.getItem("token")) {
+        if (!sessionStorage.getItem("token") ) {
             router.push("/signin");
             return;
         }
+        if (!sessionStorage.getItem("isAdmin") ) {
+            router.push("/adminEvent");
+            return;
+        }
+
+
         loadAll();
     }, []);
 
@@ -154,7 +160,7 @@ const EventsPage = () => {
 
                 <header className="py-14 border-b border-stone-200 mb-10">
                     <div className="flex items-center justify-between">
-                        <div>
+                        <div className="flex-1 text-center">
                             <h1 className="text-4xl font-bold text-stone-900 tracking-tight ">Available Events</h1>
                             <p className="mt-2 text-sm text-stone-400 font-light">
                                 {loading
@@ -312,9 +318,13 @@ const EventsPage = () => {
                                             {ev.totalTickets} tickets available
                                         </p>
                                     )}
+                                    <p className="text-stone-400 text-xs font-light mt-1">
+                                        Status : {ev.status}
+                                    </p>
 
                                     <div className="mt-5 pt-4 border-t border-stone-100 flex items-center justify-between">
                                         <span className="text-xs text-stone-300">{dt.full} · {dt.time}</span>
+                                    <div className="text-stone-900"> Reserve</div>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); setSelectedEvent(ev); }}
                                             className="w-6 h-6 rounded-full bg-stone-100 flex items-center justify-center text-xs text-stone-400 group-hover:bg-stone-900 group-hover:text-white transition-all"
