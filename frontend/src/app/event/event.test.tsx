@@ -55,9 +55,19 @@ beforeEach(() => {
     (searchEvents as jest.Mock).mockResolvedValue([]);
     (filterEvents as jest.Mock).mockResolvedValue([]);
 
-    Storage.prototype.getItem = jest.fn((key) => (key === "token" ? "mock-token" : null));
+    Storage.prototype.getItem = jest.fn((key: string) => {
+        switch (key) {
+            case "token":
+                return "mock-token";
+            case "isAdmin":
+                return null;
+            default:
+                return null;
+        }
+    });
     Storage.prototype.clear = jest.fn();
 });
+
 
 
 test("Checking that the page loads correctly", async () => {

@@ -77,8 +77,16 @@ beforeEach(() => {
     (cancelEvent as jest.Mock).mockResolvedValue({});
     (createEvent as jest.Mock).mockResolvedValue({});
     (updateEvent as jest.Mock).mockResolvedValue({});
-    Storage.prototype.getItem = jest.fn((key) => (key === "token" ? "mock-token" : null));
-    Storage.prototype.clear = jest.fn();
+    Storage.prototype.getItem = jest.fn((key: string) => {
+        switch (key) {
+            case "token":
+                return "mock-token";
+            case "isAdmin":
+                return "true";
+            default:
+                return null;
+        }
+    });Storage.prototype.clear = jest.fn();
 });
 
 test("renders the overall page", async () => {

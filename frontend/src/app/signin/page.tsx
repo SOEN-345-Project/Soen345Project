@@ -44,9 +44,10 @@ const SignInPage = () => {
             }
             const isadmin = await isAdmin();
             sessionStorage.clear();
-            if (isadmin) {sessionStorage.setItem("isAdmin", "true");}
             sessionStorage.setItem("userLoggedIn", "true");
             sessionStorage.setItem("token", token);
+            if (isadmin) {sessionStorage.setItem("isAdmin", "true");}
+
             if(isadmin){
             router.push("/adminEvent");}
             else {router.push("/event");}

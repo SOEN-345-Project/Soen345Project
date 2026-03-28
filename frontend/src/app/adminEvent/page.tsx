@@ -65,6 +65,10 @@ const AdminEventsPage = () => {
             router.push("/signin");
             return;
         }
+        if (!sessionStorage.getItem("isAdmin") ) {
+            router.push("/event");
+            return;
+        }
         loadAll();
     }, []);
 

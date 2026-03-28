@@ -79,7 +79,7 @@ const EventsPage = () => {
             router.push("/signin");
             return;
         }
-        if (!sessionStorage.getItem("isAdmin") ) {
+        if (sessionStorage.getItem("isAdmin") ) {
             router.push("/adminEvent");
             return;
         }

@@ -48,7 +48,7 @@ export default function ReservationsList() {
         if (!sessionStorage.getItem("token")) {
             router.push("/signin");
         }
-        if (!sessionStorage.getItem("isAdmin") ) {
+        if (sessionStorage.getItem("isAdmin") ) {
             router.push("/adminEvent");
             return;
         }
