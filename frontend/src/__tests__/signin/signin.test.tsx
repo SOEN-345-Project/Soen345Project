@@ -17,7 +17,6 @@ jest.mock("@/lib/axios", () => ({
 }));
 
 const mockLogin = login as jest.MockedFunction<typeof login>;
-const mockisAdmin = isAdmin as jest.MockedFunction<typeof isAdmin>;
 
 const fillAndSubmit = async (identifier: string, password: string) => {
     await userEvent.type(screen.getByPlaceholderText("Enter your email or phone"), identifier);

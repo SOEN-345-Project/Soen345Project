@@ -24,3 +24,5 @@ export const formatDateReservation = (iso: string) => {
         time: d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
     };
 };
+
+export const isPhone = (value: string) => /^[\d\s\+\-\(\)]{7,}$/.test(value.trim());

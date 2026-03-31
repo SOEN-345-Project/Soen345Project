@@ -34,9 +34,6 @@ const LOCATION_OPTIONS = [
     { id: 4, name: "MTELUS" },
     { id: 5, name: "Scotiabank Arena" },
 ];
-
-
-
 const empty: AdminEventRequest = {
     title: "",
     description: "",

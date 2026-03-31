@@ -1,8 +1,9 @@
 "use client";
 
-import {useEffect, useEffectEvent, useState} from "react";
+import {useEffect, useState} from "react";
 import { useRouter } from "next/navigation";
 import { login,isAdmin } from "@/lib/axios";
+import {isPhone} from "@/app/utils";
 
 const SignInPage = () => {
 
@@ -13,7 +14,7 @@ const SignInPage = () => {
     const [error, setError] = useState<string>("");
     const [loading, setLoading] = useState(false);
 
-    const isPhone = (value: string) => /^[\d\s\+\-\(\)]{7,}$/.test(value.trim());
+
     useEffect(() => {
         sessionStorage.clear();
     }, []);
