@@ -55,9 +55,6 @@ const EventsPage = () => {
     const [loading, setLoading]               = useState(false);
     const [error, setError]                   = useState<string | null>(null);
     const [selectedEvent, setSelectedEvent] = useState<EventDto | null>(null);
-    const handleReserve = async (eventId: number, ticketCount: number) => {
-       // await createReservation({ eventId, ticketCount }); // replace with your real axios call
-    };
     const loadAll = useCallback(async () => {
         setLoading(true);
         setError(null);

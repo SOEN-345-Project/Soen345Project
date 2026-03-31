@@ -42,10 +42,12 @@ const SignInPage = () => {
                 setError("Login failed: no token received.");
                 return;
             }
-            const isadmin = await isAdmin();
+
             sessionStorage.clear();
             sessionStorage.setItem("userLoggedIn", "true");
             sessionStorage.setItem("token", token);
+
+            const isadmin = await isAdmin();
             if (isadmin) {sessionStorage.setItem("isAdmin", "true");}
 
             if(isadmin){

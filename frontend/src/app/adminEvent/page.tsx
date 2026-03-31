@@ -1,5 +1,4 @@
 "use client";
-import ReservationModal from "@/app/reservation/reservation";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { cancelEvent, getEveryEvents, EventDto } from "@/lib/axios";
@@ -23,17 +22,6 @@ const CATEGORY_COLORS: Record<string, { dot: string; text: string; bg: string; b
     "Festival": { dot: "bg-orange-400", text: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200" },
 };
 
-const fakeEvent: EventDto = {
-    id: 42,
-    title: "Jazz Night at Bell Centre",
-    description: "An unforgettable evening of live jazz with world-class musicians.",
-    eventDate: "2025-08-15T20:00:00",
-    categoryName: "Concert",
-    locationName: "Bell Centre",
-    city: "Montreal",
-    totalTickets: 120,
-    status: "ACTIVE",
-};
 const AdminEventsPage = () => {
     const router = useRouter();
     const [modal, setModal] = useState<{ mode: "add" | "modify"; event: EventDto | null } | null>(null);
