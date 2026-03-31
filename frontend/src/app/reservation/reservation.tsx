@@ -2,14 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { EventDto, ReservationRequest, createReservation } from "@/lib/axios";
-
-const formatDate = (iso: string) => {
-    const d = new Date(iso);
-    return {
-        full: d.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
-        time: d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
-    };
-};
+import {formatDateReservation} from "@/app/utils";
 
 interface ReservationModalProps {
     event: EventDto | null;
@@ -39,7 +32,7 @@ export default function ReservationModal({ event, onClose}: ReservationModalProp
 
     if (!event) return null;
 
-    const dt = formatDate(event.eventDate);
+    const dt = formatDateReservation(event.eventDate);
     const maxTickets = event.totalTickets ?? 10;
 
     const handleConfirm = async () => {

@@ -1,5 +1,5 @@
 import {fireEvent, render, screen} from "@testing-library/react";
-import EventFormModal from "./eventAddModify";
+import EventFormModal from "../../app/adminEvent/eventAddModify";
 import "@testing-library/jest-dom";
 import {createEvent, EventDto, updateEvent} from "@/lib/axios";
 import userEvent from "@testing-library/user-event";

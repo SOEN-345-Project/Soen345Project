@@ -13,7 +13,7 @@ jest.mock("@/lib/axios", () => ({
     searchEvents: jest.fn(),
     filterEvents: jest.fn(),
 }));
-jest.mock("../reservation/reservation", () => ({
+jest.mock("../../app/reservation/reservation", () => ({
     __esModule: true,
     default: ({ event, onClose }: { event: any; onClose: () => void }) => {
         if (!event) return null;
@@ -22,7 +22,7 @@ jest.mock("../reservation/reservation", () => ({
 }));
 
 import { getAllEvents, searchEvents, filterEvents } from "@/lib/axios";
-import EventsPage from "./page";
+import EventsPage from "../../app/event/page";
 
 const mockPush = jest.fn();
 

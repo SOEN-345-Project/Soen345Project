@@ -3,16 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { cancelEvent, getEveryEvents, EventDto } from "@/lib/axios";
 import EventFormModal from "@/app/adminEvent/eventAddModify";
-
-const formatDate = (iso: string) => {
-    const d = new Date(iso);
-    return {
-        day:   d.toLocaleDateString("en-US", { day: "2-digit" }),
-        month: d.toLocaleDateString("en-US", { month: "short" }).toUpperCase(),
-        full:  d.toLocaleDateString("en-US", { weekday: "short", month: "long", day: "numeric" }),
-        time:  d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
-    };
-};
+import { formatDate } from "../utils";
 
 const CATEGORY_COLORS: Record<string, { dot: string; text: string; bg: string; border: string }> = {
     "Concert": { dot: "bg-violet-400", text: "text-violet-600", bg: "bg-violet-50", border: "border-violet-200" },

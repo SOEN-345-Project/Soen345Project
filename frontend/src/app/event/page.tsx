@@ -3,19 +3,8 @@ import ReservationModal from "@/app/reservation/reservation";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getAllEvents, searchEvents, filterEvents, EventDto, EventFilterParams } from "@/lib/axios";
+import {formatDate, toJavaDateTime} from "@/app/utils";
 
-const toJavaDateTime = (date: string): string =>
-    new Date(date).toISOString().slice(0, 19);
-
-const formatDate = (iso: string) => {
-    const d = new Date(iso);
-    return {
-        day:   d.toLocaleDateString("en-US", { day: "2-digit" }),
-        month: d.toLocaleDateString("en-US", { month: "short" }).toUpperCase(),
-        full:  d.toLocaleDateString("en-US", { weekday: "short", month: "long", day: "numeric" }),
-        time:  d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
-    };
-};
 
 const CATEGORY_COLORS: Record<string, { dot: string; text: string; bg: string; border: string }> = {
     "Concert": { dot: "bg-violet-400", text: "text-violet-600", bg: "bg-violet-50", border: "border-violet-200" },

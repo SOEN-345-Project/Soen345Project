@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { EventDto,createEvent, updateEvent } from "@/lib/axios";
+import {toDatetimeLocal} from "../utils"
 
 export interface AdminEventRequest {
     title: string;
@@ -34,10 +35,7 @@ const LOCATION_OPTIONS = [
     { id: 5, name: "Scotiabank Arena" },
 ];
 
-const toDatetimeLocal = (iso: string) => {
-    if (!iso) return "";
-    return new Date(iso).toISOString().slice(0, 16);
-};
+
 
 const empty: AdminEventRequest = {
     title: "",

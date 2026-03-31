@@ -1,7 +1,7 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import SignInPage from "./page";
+import SignInPage from "../../app/signin/page";
 import {isAdmin, login} from "@/lib/axios";
 import '@testing-library/jest-dom';
 
