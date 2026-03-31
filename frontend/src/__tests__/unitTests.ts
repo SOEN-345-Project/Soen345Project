@@ -50,18 +50,18 @@ describe('toJavaDateTime', () => {
         expect(toJavaDateTime("2024-06-15T12:30:00.000Z")).toBe("2024-06-15T12:30:00");
     });
 
-    it('throws upon invalid input', () => {
+    it('throws upon entering invalid input', () => {
         expect(() => toJavaDateTime("nv-drrgf-reg")).toThrow(RangeError);
     });
 
-    it('throws upon empty string', () => {
+    it('throws upon entering empty string', () => {
         expect(() => toJavaDateTime("")).toThrow(RangeError);
     });
 });
 
 
 describe('formatDateReservation', () => {
-    it('returns correct values for valid input', () => {
+    it('returns correct values for inputting valid input', () => {
         const result = formatDateReservation("2024-06-15T12:00:00.000Z");
         expect(result.full).toContain("June");
         expect(result.full).toContain("15");
@@ -69,13 +69,13 @@ describe('formatDateReservation', () => {
         expect(result.time).toMatch(/\d{2}:\d{2}/);
     });
 
-    it('returns Invalid value for invalid input', () => {
+    it('returns Invalid value for inputting invalid input', () => {
         const result = formatDateReservation("nv-drrgf-reg");
         expect(result.full).toBe("Invalid Date");
         expect(result.time).toBe("Invalid Date");
     });
 
-    it('returns Invalid value for empty string', () => {
+    it('returns Invalid value for inputting empty string', () => {
         const result = formatDateReservation("");
         expect(result.full).toBe("Invalid Date");
         expect(result.time).toBe("Invalid Date");
@@ -91,7 +91,7 @@ describe('isPhone', () => {
         const result = isPhone("2024-06-15T14:30:00.000Z");
         expect(result).toBe(false);
     });
-    it('return false when empty  value is inputted', () => {
+    it('return false when empty value is inputted', () => {
         const result = isPhone("");
         expect(result).toBe(false);
     });
