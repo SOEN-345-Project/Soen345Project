@@ -21,6 +21,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.time.LocalDateTime;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
@@ -133,6 +135,99 @@ class AuthenticationControllerIntegrationTest {
         assertThat(response.getBody()).isEqualTo(Boolean.TRUE);
     }
 
+    @Test
+    void login_withUnknownEmail_returnsBadRequest() {
+        LoginUserDto loginPayload = new LoginUserDto();
+        loginPayload.setEmail("missing@example.com");
+        loginPayload.setPassword("StrongPass123!");
+
+        ResponseEntity<?> response = authenticationController.login(loginPayload);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(String.valueOf(response.getBody())).contains("User not found");
+    }
+
+    @Test
+    void login_withUnverifiedUser_returnsBadRequest() {
+        authenticationController.register(
+                signupDto("unverified@example.com", "5551112222", "EMAIL")
+        );
+
+        LoginUserDto loginPayload = new LoginUserDto();
+        loginPayload.setEmail("unverified@example.com");
+        loginPayload.setPassword("StrongPass123!");
+
+        ResponseEntity<?> response = authenticationController.login(loginPayload);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(String.valueOf(response.getBody())).contains("User not verified");
+    }
+
+    @Test
+    void login_withWrongPassword_returnsBadRequest() {
+        authenticationController.register(
+                signupDto("wrongpass@example.com", "5551112222", "EMAIL")
+        );
+        verifyByStoredCode("wrongpass@example.com");
+
+        LoginUserDto loginPayload = new LoginUserDto();
+        loginPayload.setEmail("wrongpass@example.com");
+        loginPayload.setPassword("WrongPass999!");
+
+        ResponseEntity<?> response = authenticationController.login(loginPayload);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(String.valueOf(response.getBody())).contains("Bad credentials");
+    }
+
+    @Test
+    void verify_withWrongCode_returnsBadRequest() {
+        authenticationController.register(
+                signupDto("wrongcode@example.com", "5551112222", "EMAIL")
+        );
+
+        VerifyUserDto verifyPayload = new VerifyUserDto();
+        verifyPayload.setEmail("wrongcode@example.com");
+        verifyPayload.setVerificationCode("000000");
+
+        ResponseEntity<?> response = authenticationController.verify(verifyPayload);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(String.valueOf(response.getBody())).contains("Invalid verification code");
+    }
+
+    @Test
+    void verify_withExpiredCode_returnsBadRequest() {
+        authenticationController.register(
+                signupDto("expired@example.com", "5551112222", "EMAIL")
+        );
+        User saved = userRepository.findByEmail("expired@example.com").orElseThrow();
+        saved.setVerificationCodeExpiresAt(LocalDateTime.now().minusMinutes(1));
+        userRepository.save(saved);
+
+        VerifyUserDto verifyPayload = new VerifyUserDto();
+        verifyPayload.setEmail("expired@example.com");
+        verifyPayload.setVerificationCode(saved.getVerificationCode());
+
+        ResponseEntity<?> response = authenticationController.verify(verifyPayload);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(String.valueOf(response.getBody())).contains("Verification code expired");
+    }
+
+    @Test
+    void resendVerification_forVerifiedUser_returnsBadRequest() {
+        authenticationController.register(
+                signupDto("already.verified@example.com", "5551112222", "EMAIL")
+        );
+        verifyByStoredCode("already.verified@example.com");
+
+        ResponseEntity<?> response = authenticationController.resendVerification("already.verified@example.com", null);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(String.valueOf(response.getBody())).contains("User already verified");
+    }
+
     private RegisterUserDto signupDto(String email, String phone, String method) {
         RegisterUserDto dto = new RegisterUserDto();
         dto.setFirstName("John");
@@ -142,5 +237,13 @@ class AuthenticationControllerIntegrationTest {
         dto.setPhoneNumber(phone);
         dto.setVerificationMethod(method);
         return dto;
+    }
+
+    private void verifyByStoredCode(String email) {
+        User saved = userRepository.findByEmail(email).orElseThrow();
+        VerifyUserDto verifyPayload = new VerifyUserDto();
+        verifyPayload.setEmail(email);
+        verifyPayload.setVerificationCode(saved.getVerificationCode());
+        authenticationController.verify(verifyPayload);
     }
 }
