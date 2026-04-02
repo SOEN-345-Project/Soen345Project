@@ -20,6 +20,15 @@ const fakeEvent: EventDto = {
     status: "ACTIVE",
 };
 
+test('clicking the overlay closes the modal', () => {
+    const mockOnClose = jest.fn();
+    render(
+        <EventFormModal event={null} mode="add" onClose={mockOnClose} />
+    );
+    const overlay = screen.getByTestId('modal-overlay');
+    fireEvent.click(overlay);
+    expect(mockOnClose).toHaveBeenCalledTimes(1);
+});
 describe("EventFormModal", () => {
     beforeEach(() => {
         jest.clearAllMocks();

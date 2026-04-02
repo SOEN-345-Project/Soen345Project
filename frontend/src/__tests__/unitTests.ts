@@ -2,7 +2,7 @@ import {formatDate,toDatetimeLocal,toJavaDateTime,formatDateReservation,isPhone}
 
 describe('formatDate', () => {
 
-    it('return valid valuew upon inputting valid date', () => {
+    it('return valid value upon inputting valid date', () => {
         const iso = "2024-06-15T12:00:00.000Z";
         const result = formatDate(iso);
         expect(result.day).toMatch(/^\d{2}$/);

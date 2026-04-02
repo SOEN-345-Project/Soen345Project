@@ -139,6 +139,7 @@ export default function EventFormModal({ event, mode, onClose }: EventFormModalP
     return (
         <div
             ref={overlayRef}
+            data-testid="modal-overlay"
             onClick={(e) => { if (e.target === overlayRef.current && status !== "loading") onClose(); }}
             style={{
                 position: "fixed", inset: 0, zIndex: 50,

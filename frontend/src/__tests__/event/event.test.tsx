@@ -257,3 +257,23 @@ test("clicking the arrow button opens the reservation modal", async () => {
     expect(screen.getByTestId("mock-reservation-modal")).toBeInTheDocument();
 });
 
+test('Filter calls filterEvents with correct date params', async () => {
+    render(<EventsPage />);
+    await screen.findByText("Jazz Night");
+    fireEvent.change(screen.getByDisplayValue('All Locations'), {target: { value: '2' }});
+    fireEvent.change(screen.getByTitle('Start date'), { target: { value: '2025-06-01' } });
+    fireEvent.change(screen.getByTitle('End date'),   { target: { value: '2025-06-30' } });
+    fireEvent.click(screen.getByRole("button", { name: /^filter$/i }));
+    await waitFor(() => expect(filterEvents).toHaveBeenCalled());
+
+    await waitFor(() => {
+        expect(filterEvents).toHaveBeenCalledWith(
+            expect.objectContaining({
+                locationId:2,
+                startDate: expect.any(String),
+                endDate:   expect.any(String),
+            })
+        );
+    });
+});
+
