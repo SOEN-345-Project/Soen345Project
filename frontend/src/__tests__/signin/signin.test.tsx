@@ -1,7 +1,7 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import SignInPage from "./page";
+import SignInPage from "../../app/signin/page";
 import {isAdmin, login} from "@/lib/axios";
 import '@testing-library/jest-dom';
 
@@ -17,7 +17,6 @@ jest.mock("@/lib/axios", () => ({
 }));
 
 const mockLogin = login as jest.MockedFunction<typeof login>;
-const mockisAdmin = isAdmin as jest.MockedFunction<typeof isAdmin>;
 
 const fillAndSubmit = async (identifier: string, password: string) => {
     await userEvent.type(screen.getByPlaceholderText("Enter your email or phone"), identifier);

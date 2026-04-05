@@ -1,8 +1,9 @@
 "use client";
 
-import {useEffect, useEffectEvent, useState} from "react";
+import {useEffect, useState} from "react";
 import { useRouter } from "next/navigation";
 import { login,isAdmin } from "@/lib/axios";
+import {isPhone} from "@/app/utils";
 
 const SignInPage = () => {
 
@@ -13,7 +14,7 @@ const SignInPage = () => {
     const [error, setError] = useState<string>("");
     const [loading, setLoading] = useState(false);
 
-    const isPhone = (value: string) => /^[\d\s\+\-\(\)]{7,}$/.test(value.trim());
+
     useEffect(() => {
         sessionStorage.clear();
     }, []);
@@ -42,10 +43,12 @@ const SignInPage = () => {
                 setError("Login failed: no token received.");
                 return;
             }
-            const isadmin = await isAdmin();
+
             sessionStorage.clear();
             sessionStorage.setItem("userLoggedIn", "true");
             sessionStorage.setItem("token", token);
+
+            const isadmin = await isAdmin();
             if (isadmin) {sessionStorage.setItem("isAdmin", "true");}
 
             if(isadmin){
