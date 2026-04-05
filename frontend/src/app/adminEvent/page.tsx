@@ -27,7 +27,8 @@ const AdminEventsPage = () => {
         setLoading(true);
         setError(null);
         try {
-            const events = await getEveryEvents() as EventDto[];
+            const events1 = await getEveryEvents() as EventDto[];
+            const events = events1.filter((c)=> c.status==="ACTIVE");
             setAllEvents(events);
             setDisplayEvents(events);
             const cats = ["All", ...Array.from(new Set(events.map((e) => e.categoryName).filter((c): c is string => Boolean(c))))];
