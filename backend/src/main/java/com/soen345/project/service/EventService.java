@@ -59,7 +59,7 @@ public class EventService {
             events = eventRepository.findActiveEvents(LocalDateTime.now());
         }
 
-        // Apply additional filters if needed
+
         if (categoryId != null && (startDate != null || locationId != null)) {
             events = events.stream()
                     .filter(e -> e.getCategoryId().equals(categoryId))
@@ -85,6 +85,7 @@ public class EventService {
         dto.setDescription(event.getDescription());
         dto.setEventDate(event.getEventDate());
         dto.setTotalTickets(event.getTotalTickets());
+        dto.setStatus(event.getStatus());
 
         // Fetch category name
         if (event.getCategoryId() != null) {
