@@ -27,6 +27,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         this.userDetailsService = userDetailsService;
     }
 
+    /**
+     * All routes under {@code /auth/} are public ({@code permitAll}). Do not parse JWT here — an invalid or
+     * stale {@code Authorization: Bearer} header would return 401 before authorization runs (e.g. E2E helper GET).
+     */
+    @Override
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
+        String path = request.getRequestURI();
+        String contextPath = request.getContextPath();
+        if (contextPath != null && !contextPath.isEmpty() && path.startsWith(contextPath)) {
+            path = path.substring(contextPath.length());
+        }
+        if (path.isEmpty() || path.charAt(0) != '/') {
+            path = "/" + path;
+        }
+        return path.startsWith("/auth/");
+    }
+
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                     @NonNull HttpServletResponse response,
