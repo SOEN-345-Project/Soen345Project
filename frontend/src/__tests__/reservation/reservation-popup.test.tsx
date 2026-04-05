@@ -1,6 +1,6 @@
 // ReservationModal.test.tsx
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import ReservationModal from "./reservation";
+import ReservationModal from "../../app/reservation/reservation";
 import * as axiosLib from "@/lib/axios";
 import "@testing-library/jest-dom";
 jest.mock("@/lib/axios", () => ({

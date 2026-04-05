@@ -13,7 +13,7 @@ jest.mock("@/lib/axios", () => ({
     searchEvents: jest.fn(),
     filterEvents: jest.fn(),
 }));
-jest.mock("../reservation/reservation", () => ({
+jest.mock("../../app/reservation/reservation", () => ({
     __esModule: true,
     default: ({ event, onClose }: { event: any; onClose: () => void }) => {
         if (!event) return null;
@@ -22,7 +22,7 @@ jest.mock("../reservation/reservation", () => ({
 }));
 
 import { getAllEvents, searchEvents, filterEvents } from "@/lib/axios";
-import EventsPage from "./page";
+import EventsPage from "../../app/event/page";
 
 const mockPush = jest.fn();
 
@@ -255,5 +255,25 @@ test("clicking the arrow button opens the reservation modal", async () => {
     fireEvent.click(screen.getAllByLabelText("Reserve tickets")[0]);
 
     expect(screen.getByTestId("mock-reservation-modal")).toBeInTheDocument();
+});
+
+test('Filter calls filterEvents with correct date params', async () => {
+    render(<EventsPage />);
+    await screen.findByText("Jazz Night");
+    fireEvent.change(screen.getByDisplayValue('All Locations'), {target: { value: '2' }});
+    fireEvent.change(screen.getByTitle('Start date'), { target: { value: '2025-06-01' } });
+    fireEvent.change(screen.getByTitle('End date'),   { target: { value: '2025-06-30' } });
+    fireEvent.click(screen.getByRole("button", { name: /^filter$/i }));
+    await waitFor(() => expect(filterEvents).toHaveBeenCalled());
+
+    await waitFor(() => {
+        expect(filterEvents).toHaveBeenCalledWith(
+            expect.objectContaining({
+                locationId:2,
+                startDate: expect.any(String),
+                endDate:   expect.any(String),
+            })
+        );
+    });
 });
 

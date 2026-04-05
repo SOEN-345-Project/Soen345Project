@@ -1,7 +1,7 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import ReservationsList from "./page";
+import ReservationsList from "../../app/reservation/page";
 import * as axiosLib from "@/lib/axios";
 import EventsPage from "@/app/event/page";
 

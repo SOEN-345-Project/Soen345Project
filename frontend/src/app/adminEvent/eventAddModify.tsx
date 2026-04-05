@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { EventDto,createEvent, updateEvent } from "@/lib/axios";
+import {toDatetimeLocal} from "../utils"
 
 export interface AdminEventRequest {
     title: string;
@@ -33,12 +34,6 @@ const LOCATION_OPTIONS = [
     { id: 4, name: "MTELUS" },
     { id: 5, name: "Scotiabank Arena" },
 ];
-
-const toDatetimeLocal = (iso: string) => {
-    if (!iso) return "";
-    return new Date(iso).toISOString().slice(0, 16);
-};
-
 const empty: AdminEventRequest = {
     title: "",
     description: "",
@@ -144,6 +139,7 @@ export default function EventFormModal({ event, mode, onClose }: EventFormModalP
     return (
         <div
             ref={overlayRef}
+            data-testid="modal-overlay"
             onClick={(e) => { if (e.target === overlayRef.current && status !== "loading") onClose(); }}
             style={{
                 position: "fixed", inset: 0, zIndex: 50,
