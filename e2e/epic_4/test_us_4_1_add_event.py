@@ -1,8 +1,15 @@
-"""US-4.1: Admin creates an event → it appears on the list."""
-import os
-import time
+"""
+US-4.1: Admin creates an event → card appears with expected fields.
 
-import pytest
+Algorithm:
+  1. require_env for title, datetime, category, location, tickets (optional description).
+  2. goto_admin_events; open add modal; fill form; submit_create_event (waits “Event created!”); close_modal_done.
+  3. wait_till_admin_card_with_title_visible; find card.
+  4. Assert card text includes title, category, location (or first CSV segment), ticket count, “Status: ACTIVE”.
+
+Asserts: list reflects the created event and shows ACTIVE.
+"""
+import os
 
 from epic_4.admin_helpers import (
     close_modal_done,
@@ -11,20 +18,13 @@ from epic_4.admin_helpers import (
     goto_admin_events,
     open_add_event_modal,
     submit_create_event,
+    wait_till_admin_card_with_title_visible,
 )
-from support.waits import wait_till_custom_condition
-
-WAIT_SECONDS = 10
-
-
-def _need(*keys: str) -> None:
-    missing = [k for k in keys if not os.environ.get(k, "").strip()]
-    if missing:
-        pytest.skip("Set in e2e/.env: " + ", ".join(missing))
+from support.env_checks import require_env
 
 
 def test_add_event_appears_in_admin_list(logged_in_admin, base_url):
-    _need(
+    require_env(
         "E2E_ADD_EVENT_TITLE",
         "E2E_ADD_EVENT_DATETIME",
         "E2E_ADD_EVENT_CATEGORY",
@@ -39,6 +39,7 @@ def test_add_event_appears_in_admin_list(logged_in_admin, base_url):
     tickets = int(os.environ["E2E_ADD_EVENT_TICKETS"].strip())
 
     driver = logged_in_admin
+
     goto_admin_events(driver, base_url)
     open_add_event_modal(driver)
     fill_admin_event_form(
@@ -51,12 +52,12 @@ def test_add_event_appears_in_admin_list(logged_in_admin, base_url):
         tickets=tickets,
     )
     submit_create_event(driver)
-    time.sleep(WAIT_SECONDS)
     close_modal_done(driver)
 
-    wait_till_custom_condition(driver, lambda d: find_admin_event_card(d, title) is not None)
+    wait_till_admin_card_with_title_visible(driver, title)
     card = find_admin_event_card(driver, title)
     assert card is not None
+
     assert title in card.text
     assert category in card.text
     assert location in card.text or location.split(",")[0].strip() in card.text

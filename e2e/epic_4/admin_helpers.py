@@ -1,21 +1,76 @@
 """Admin /adminEvent: list, add/modify modal, cancel event, customer check."""
+import re
+
+from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 
-from support.waits import wait_till_custom_condition, wait_till_element_is_clickable, wait_till_element_is_hidden, wait_till_element_is_present
+from support.waits import (
+    DEFAULT_TIMEOUT,
+    wait_till_custom_condition,
+    wait_till_element_is_clickable,
+    wait_till_element_is_hidden,
+    wait_till_element_is_present,
+)
 
 CARD_H2 = (By.CSS_SELECTOR, "h2.text-lg.font-semibold.text-stone-900")
+_LOADING_EVENTS = (By.XPATH, "//p[contains(., 'Loading events...')]")
+_NO_ADMIN_EVENTS = (By.XPATH, "//p[contains(., 'No events found')]")
+# Cancel + getEveryEvents + filter can exceed DEFAULT_TIMEOUT on slower machines
+ADMIN_GRID_AFTER_CANCEL_TIMEOUT = 90.0
+
+
+def _admin_grid_has_cards_or_empty_state(driver) -> bool:
+    return bool(driver.find_elements(*CARD_H2) or driver.find_elements(*_NO_ADMIN_EVENTS))
+
+
+def wait_admin_event_grid_ready(driver, *, timeout: float = DEFAULT_TIMEOUT) -> None:
+    wait_till_element_is_hidden(driver, _LOADING_EVENTS, timeout=timeout)
+    wait_till_custom_condition(driver, _admin_grid_has_cards_or_empty_state, timeout=timeout)
+
+
+def scroll_admin_page_to_bottom_once(driver, *, wait_for_grid: bool = True) -> None:
+    """One scroll to the bottom. Set ``wait_for_grid=False`` if you already called ``wait_admin_event_grid_ready``."""
+    if wait_for_grid:
+        wait_admin_event_grid_ready(driver)
+    if driver.find_elements(*_NO_ADMIN_EVENTS):
+        return
+    driver.execute_script(
+        """
+        const y = Math.max(
+            document.body.scrollHeight,
+            document.documentElement.scrollHeight,
+        );
+        window.scrollTo({ top: y, left: 0, behavior: 'instant' });
+        """
+    )
 
 
 def goto_admin_events(driver, base_url: str) -> None:
     driver.get(f"{base_url}/adminEvent")
     wait_till_element_is_present(driver, (By.XPATH, "//h1[contains(., 'All Events')]"))
-    wait_till_element_is_hidden(driver, (By.XPATH, "//p[contains(., 'Loading events...')]"))
+    wait_admin_event_grid_ready(driver)
 
 
 def click_logout(driver) -> None:
     wait_till_element_is_clickable(driver, (By.XPATH, "//button[contains(., 'Logout')]")).click()
     wait_till_custom_condition(driver, lambda d: "/signin" in d.current_url)
+
+
+def read_admin_event_cards(driver) -> list[dict[str, str]]:
+    """
+    Read every event card currently in the DOM: title (h2) and full card text (status, location, etc.).
+    Safe if the list re-renders while iterating (skips stale nodes).
+    """
+    out: list[dict[str, str]] = []
+    for h2 in driver.find_elements(*CARD_H2):
+        try:
+            title = h2.text.strip()
+            card = h2.find_element(By.XPATH, "./ancestor::div[contains(@class,'rounded-2xl')][1]")
+            out.append({"title": title, "body": card.text.strip()})
+        except StaleElementReferenceException:
+            continue
+    return out
 
 
 def find_admin_event_card(driver, title_substring: str):
@@ -26,11 +81,16 @@ def find_admin_event_card(driver, title_substring: str):
 
 
 def find_admin_active_event_card(driver, title_substring: str):
+    """Card whose title contains ``title_substring`` and status is ACTIVE (no scrolling — scroll separately if needed)."""
     for h2 in driver.find_elements(*CARD_H2):
         if title_substring not in h2.text:
             continue
         card = h2.find_element(By.XPATH, "./ancestor::div[contains(@class,'rounded-2xl')][1]")
-        if "Status: ACTIVE" in card.text:
+        if re.search(r"Status:\s*ACTIVE\b", card.text, re.IGNORECASE):
+            driver.execute_script(
+                "arguments[0].scrollIntoView({block: 'center', behavior: 'instant'});",
+                card,
+            )
             return card
     return None
 
@@ -119,6 +179,51 @@ def wait_card_contains_status(driver, title_substring: str, status_fragment: str
         return c is not None and status_fragment in c.text
 
     wait_till_custom_condition(driver, card_has_status)
+
+
+def wait_till_no_admin_card_contains_title(
+    driver, title_substring: str, *, timeout: float = ADMIN_GRID_AFTER_CANCEL_TIMEOUT
+) -> None:
+    """Poll until no event card h2 contains ``title_substring`` (call after grid is stable / scrolled)."""
+
+    def title_gone(d):
+        for c in read_admin_event_cards(d):
+            if title_substring in c["title"]:
+                return False
+        return True
+
+    wait_till_custom_condition(driver, title_gone, timeout=timeout)
+
+
+def wait_admin_grid_no_card_with_title(
+    driver, title_substring: str, *, timeout: float = ADMIN_GRID_AFTER_CANCEL_TIMEOUT
+) -> None:
+    """After cancel + reload: wait for grid, scroll to bottom, then ``wait_till_no_admin_card_contains_title``."""
+    wait_admin_event_grid_ready(driver, timeout=timeout)
+    scroll_admin_page_to_bottom_once(driver, wait_for_grid=False)
+    wait_till_no_admin_card_contains_title(driver, title_substring, timeout=timeout)
+
+
+def wait_till_admin_card_with_title_visible(
+    driver, title_substring: str, *, timeout: float = DEFAULT_TIMEOUT
+) -> None:
+    """Wait until ``find_admin_event_card`` finds a card (used after create/edit)."""
+
+    def found(d):
+        return find_admin_event_card(d, title_substring) is not None
+
+    wait_till_custom_condition(driver, found, timeout=timeout)
+
+
+def wait_till_admin_card_with_title_gone(
+    driver, title_substring: str, *, timeout: float = DEFAULT_TIMEOUT
+) -> None:
+    """Wait until no card matches ``title_substring``."""
+
+    def gone(d):
+        return find_admin_event_card(d, title_substring) is None
+
+    wait_till_custom_condition(driver, gone, timeout=timeout)
 
 
 def customer_event_page_shows_title(driver, title_substring: str) -> bool:

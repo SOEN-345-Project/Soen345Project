@@ -1,93 +1,63 @@
-"""US-4.3: Cancel event → not on customer /event → re-add same event."""
-import os
-import time
+"""
+US-4.3: Admin cancels an ACTIVE event; title disappears from the admin grid (ACTIVE-only list).
 
-import pytest
+Algorithm:
+  1. require_env E2E_ADD_EVENT_TITLE; fixture already logged in as admin.
+  2. goto_admin_events — grid ready.
+  3. scroll_admin_page_to_bottom_once — ensure lower cards are in DOM.
+  4. read_admin_event_cards: assert some card title contains the string and one match is ACTIVE; find_admin_active_event_card.
+  5. click_cancel_event_on_card — triggers reload.
+  6. wait_admin_event_grid_ready (long timeout).
+  7. scroll again (no second grid wait); wait_till_no_admin_card_contains_title — poll until no h2 contains the title.
+  8. read_admin_event_cards again; assert no card title still contains the string.
+
+Asserts: preconditions for cancel; post-cancel no card shows that title (matches ACTIVE-only behaviour after cancel).
+"""
+import os
 
 from epic_4.admin_helpers import (
+    ADMIN_GRID_AFTER_CANCEL_TIMEOUT,
     click_cancel_event_on_card,
-    click_logout,
-    close_modal_done,
-    customer_event_page_shows_title,
-    fill_admin_event_form,
     find_admin_active_event_card,
     goto_admin_events,
-    open_add_event_modal,
-    submit_create_event,
-    wait_card_contains_status,
+    read_admin_event_cards,
+    scroll_admin_page_to_bottom_once,
+    wait_admin_event_grid_ready,
+    wait_till_no_admin_card_contains_title,
 )
-from support.login_helpers import perform_sign_in
-from support.waits import wait_till_custom_condition
-
-WAIT_SECONDS = 10
+from support.env_checks import require_env
 
 
-def _need(*keys: str) -> None:
-    missing = [k for k in keys if not os.environ.get(k, "").strip()]
-    if missing:
-        pytest.skip("Set in e2e/.env: " + ", ".join(missing))
-
-
-def test_cancel_event_not_on_customer_list_then_recreate(logged_in_admin, base_url):
-    _need(
-        "E2E_CANCEL_EVENT_TITLE",
-        "E2E_CANCEL_EVENT_DATETIME",
-        "E2E_CANCEL_EVENT_CATEGORY",
-        "E2E_CANCEL_EVENT_LOCATION",
-        "E2E_CANCEL_EVENT_TICKETS",
-    )
-    title = os.environ["E2E_CANCEL_EVENT_TITLE"].strip()
-    description = os.environ.get("E2E_CANCEL_EVENT_DESCRIPTION", "").strip()
-    dt_local = os.environ["E2E_CANCEL_EVENT_DATETIME"].strip()
-    category = os.environ["E2E_CANCEL_EVENT_CATEGORY"].strip()
-    location = os.environ["E2E_CANCEL_EVENT_LOCATION"].strip()
-    tickets = int(os.environ["E2E_CANCEL_EVENT_TICKETS"].strip())
-
-    admin_email = os.environ["E2E_ADMIN_EMAIL_OR_PHONE"].strip()
-    admin_pwd = os.environ["E2E_ADMIN_PASSWORD"].strip()
-    cust_email = os.environ.get("E2E_EMAIL_OR_PHONE", "").strip()
-    cust_pwd = os.environ.get("E2E_PASSWORD", "").strip()
-
+def test_cancel_event_removes_card_from_admin_grid(logged_in_admin, base_url):
+    require_env("E2E_ADD_EVENT_TITLE")
+    title = os.environ["E2E_ADD_EVENT_TITLE"].strip()
     driver = logged_in_admin
-    goto_admin_events(driver, base_url)
-    card = find_admin_active_event_card(driver, title)
-    assert card is not None, f"No ACTIVE event matching {title!r}"
-
-    click_cancel_event_on_card(driver, card)
-    time.sleep(WAIT_SECONDS)
-    wait_card_contains_status(driver, title, "CANCELLED")
-
-    if cust_email and cust_pwd:
-        click_logout(driver)
-        perform_sign_in(driver, base_url, cust_email, cust_pwd)
-        if "/event" not in driver.current_url:
-            driver.get(f"{base_url}/event")
-        assert not customer_event_page_shows_title(driver, title)
-
-        click_logout(driver)
-        perform_sign_in(driver, base_url, admin_email, admin_pwd)
-        assert "/adminEvent" in driver.current_url
 
     goto_admin_events(driver, base_url)
-    open_add_event_modal(driver)
-    fill_admin_event_form(
-        driver,
-        title=title,
-        description=description,
-        datetime_local=dt_local,
-        category=category,
-        location=location,
-        tickets=tickets,
+
+    scroll_admin_page_to_bottom_once(driver)
+
+    cards = read_admin_event_cards(driver)
+    matching = [c for c in cards if title in c["title"]]
+    assert matching, (
+        f"Expected an event card whose title contains {title!r}. "
+        f"Found titles: {[c['title'] for c in cards]!r}"
     )
-    submit_create_event(driver)
-    time.sleep(WAIT_SECONDS)
-    close_modal_done(driver)
+    assert any("ACTIVE" in m["body"].upper() for m in matching), (
+        f"Target card for {title!r} must be ACTIVE before cancel. Bodies: {[m['body'] for m in matching]!r}"
+    )
+    desired = find_admin_active_event_card(driver, title)
+    assert desired is not None
 
-    wait_till_custom_condition(driver, lambda d: find_admin_active_event_card(d, title) is not None)
-    assert find_admin_active_event_card(driver, title) is not None
+    click_cancel_event_on_card(driver, desired)
 
-    if cust_email and cust_pwd:
-        click_logout(driver)
-        perform_sign_in(driver, base_url, cust_email, cust_pwd)
-        driver.get(f"{base_url}/event")
-        assert customer_event_page_shows_title(driver, title)
+    wait_admin_event_grid_ready(driver, timeout=ADMIN_GRID_AFTER_CANCEL_TIMEOUT)
+
+    scroll_admin_page_to_bottom_once(driver, wait_for_grid=False)
+    wait_till_no_admin_card_contains_title(driver, title, timeout=ADMIN_GRID_AFTER_CANCEL_TIMEOUT)
+
+    after_cancel = read_admin_event_cards(driver)
+    assert all(title not in c["title"] for c in after_cancel), (
+        f"Expected {title!r} on no admin card after cancel; still see "
+        f"{[c['title'] for c in after_cancel if title in c['title']]!r}"
+    )

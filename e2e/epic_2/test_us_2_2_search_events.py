@@ -1,17 +1,28 @@
-"""US-2.2: Type keyword, click Search → every card title contains the keyword."""
+"""
+US-2.2: Search by keyword → every visible card title contains that keyword.
+
+Algorithm:
+  1. Require E2E_SEARCH_KEYWORD (must match seeded data).
+  2. Open /event; wait for heading and search box; type keyword.
+  3. wait_till_input_value_equals — input value bound (React state).
+  4. Click Search; wait_till_customer_event_grid_ready — results settled.
+  5. For each card title: assert keyword appears in title text (case-insensitive).
+
+Asserts: every h2 title includes the keyword; skip if no cards after search.
+"""
 import os
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
 
 from support.waits import (
-    wait_till_custom_condition,
+    CUSTOMER_EVENTS_H1,
+    wait_till_customer_event_grid_ready,
     wait_till_element_is_clickable,
     wait_till_element_is_present,
+    wait_till_input_value_equals,
 )
 
-WAIT_SECONDS = 10
 SEARCH_BOX = (By.CSS_SELECTOR, "input[placeholder='Search by keyword...']")
 SEARCH_BTN = (By.XPATH, "//button[normalize-space()='Search']")
 
@@ -22,29 +33,18 @@ def test_search_shows_only_matching_events(logged_in_customer, base_url):
         pytest.skip("Set E2E_SEARCH_KEYWORD in e2e/.env")
 
     driver = logged_in_customer
+
     driver.get(f"{base_url}/event")
-
-    wait_till_element_is_present(driver, (By.XPATH, "//h1[contains(., 'Available Events')]"))
-
+    wait_till_element_is_present(driver, CUSTOMER_EVENTS_H1)
     search_input = wait_till_element_is_present(driver, SEARCH_BOX)
     search_input.clear()
     search_input.send_keys(keyword)
 
-    wait_till_custom_condition(
-        driver,
-        lambda d: keyword in (d.find_element(*SEARCH_BOX).get_property("value") or ""),
-    )
+    wait_till_input_value_equals(driver, SEARCH_BOX, keyword)
 
     wait_till_element_is_clickable(driver, SEARCH_BTN).click()
 
-    wait_till_custom_condition(
-        driver,
-        lambda d: bool(
-            d.find_elements(By.CSS_SELECTOR, "h2.text-lg.font-semibold.text-stone-900")
-            or d.find_elements(By.XPATH, "//p[contains(., 'No events found')]")
-        ),
-    )
-    time.sleep(WAIT_SECONDS)
+    wait_till_customer_event_grid_ready(driver)
 
     titles = driver.find_elements(By.CSS_SELECTOR, "h2.text-lg.font-semibold.text-stone-900")
     if not titles:

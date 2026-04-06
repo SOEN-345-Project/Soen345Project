@@ -1,14 +1,15 @@
 """Steps for reservation modal and /reservation page."""
 import re
 
+from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 
 from support.waits import (
-    wait_till_custom_condition,
     wait_till_element_is_clickable,
     wait_till_element_is_hidden,
     wait_till_element_is_present,
+    wait_till_element_is_visible,
 )
 
 CARD_TITLE = (By.CSS_SELECTOR, "h2.text-lg.font-semibold.text-stone-900")
@@ -97,10 +98,13 @@ def go_to_reservations_list(driver) -> None:
 
 def cancel_active_reservation_for_title(driver, title_substring: str) -> None:
     for s in driver.find_elements(By.XPATH, "//strong"):
-        if title_substring not in s.text:
+        try:
+            if title_substring not in s.text:
+                continue
+            block = s.find_element(By.XPATH, "./ancestor::div[contains(@style,'1px solid')][1]")
+            btns = block.find_elements(By.XPATH, ".//button[contains(., 'Cancel reservation')]")
+        except StaleElementReferenceException:
             continue
-        block = s.find_element(By.XPATH, "./ancestor::div[contains(@style,'1px solid')][1]")
-        btns = block.find_elements(By.XPATH, ".//button[contains(., 'Cancel reservation')]")
         if not btns:
             continue
         wait_till_element_is_clickable(driver, btns[0]).click()
@@ -108,14 +112,6 @@ def cancel_active_reservation_for_title(driver, title_substring: str) -> None:
     raise AssertionError(f"No active reservation row for title containing {title_substring!r}")
 
 
-def wait_reservation_row_cancelled(driver, title_substring: str) -> None:
-    def row_ok(d):
-        for s in d.find_elements(By.XPATH, "//strong"):
-            if title_substring not in s.text:
-                continue
-            block = s.find_element(By.XPATH, "./ancestor::div[contains(@style,'1px solid')][1]")
-            if "CANCELLED" in block.text.upper() and "Cancel reservation" not in block.text:
-                return True
-        return False
-
-    wait_till_custom_condition(driver, row_ok)
+def wait_till_no_reservations_empty_state(driver) -> None:
+    """Wait for the /reservation empty list copy (after cancel + reload, only RESERVED rows are shown)."""
+    wait_till_element_is_visible(driver, (By.XPATH, "//p[contains(., 'No reservations found.')]"))

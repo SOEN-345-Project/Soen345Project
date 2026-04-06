@@ -1,4 +1,16 @@
-"""US-3.1 / US-3.3: reserve → in-modal confirmation (incl. quantity) → /reservation row matches booking."""
+"""
+US-3.1 / US-3.3: Reserve → success modal → /reservation row matches quantity and details.
+
+Algorithm:
+  1. Require E2E_EPIC3_EVENT_TITLE (bookable event).
+  2. Open /event; wait for grid; open reservation modal; read date and location lines from modal.
+  3. Reserve; wait_for_reservation_success.
+  4. Assert “Reservation confirmed!” visible; parse quantity; assert success line shows count and “N ticket(s)” wording.
+  5. Modal Done; go to reservations list; find row by title.
+  6. Assert row contains title, quantity phrase, location fragments from modal, and years from modal date line.
+
+Asserts: confirmation UI, quantity consistency, row matches modal booking data.
+"""
 import os
 import re
 
@@ -16,7 +28,7 @@ from epic_3.reservation_helpers import (
     read_modal_date_and_location_lines,
     wait_for_reservation_success,
 )
-from support.waits import wait_till_custom_condition, wait_till_element_is_present
+from support.waits import CUSTOMER_EVENTS_H1, wait_till_customer_event_grid_ready, wait_till_element_is_present
 
 
 def test_reserve_shows_confirmation(logged_in_customer, base_url):
@@ -25,16 +37,10 @@ def test_reserve_shows_confirmation(logged_in_customer, base_url):
         pytest.skip("Set E2E_EPIC3_EVENT_TITLE in e2e/.env")
 
     driver = logged_in_customer
-    driver.get(f"{base_url}/event")
 
-    wait_till_element_is_present(driver, (By.XPATH, "//h1[contains(., 'Available Events')]"))
-    wait_till_custom_condition(
-        driver,
-        lambda d: bool(
-            d.find_elements(By.CSS_SELECTOR, "h2.text-lg.font-semibold.text-stone-900")
-            or d.find_elements(By.XPATH, "//p[contains(., 'No events found')]")
-        ),
-    )
+    driver.get(f"{base_url}/event")
+    wait_till_element_is_present(driver, CUSTOMER_EVENTS_H1)
+    wait_till_customer_event_grid_ready(driver)
 
     open_reservation_modal(driver, title)
     date_line, location_line = read_modal_date_and_location_lines(driver)
@@ -54,11 +60,10 @@ def test_reserve_shows_confirmation(logged_in_customer, base_url):
 
     click_modal_done(driver)
     go_to_reservations_list(driver)
-
     row = find_reservation_row_block(driver, title)
+
     assert title in row.text
     assert qty_phrase in row.text
-
     for frag in location_fragments_from_modal_line(location_line):
         assert frag in row.text, f"Expected location fragment {frag!r} in row: {row.text!r}"
 

@@ -1,28 +1,24 @@
 """
-Easy-to-read Selenium waits (instead of raw WebDriverWait + EC).
-
-Typical calls::
-
-    wait_till_element_is_visible(driver, (By.ID, "x"))
-    wait_till_element_is_clickable(driver, (By.CSS_SELECTOR, "button.submit"))
-    wait_till_element_is_clickable(driver, some_web_element)
-    wait_till_element_is_hidden(driver, (By.XPATH, "//p[.='Loading...']"))
-    wait_till_url_contains(driver, "/event")
-    wait_till_custom_condition(driver, lambda d: d.find_elements(...))
+Easy-to-read Selenium waits (WebDriverWait + EC + named predicates — avoid lambdas in test files).
 """
 from __future__ import annotations
 
 from typing import Callable, Tuple, TypeVar, Union
 
+from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import Select
+from selenium.webdriver.support.ui import WebDriverWait
 
 # Either a (By, selector) pair or an already-found element
 ClickableTarget = Union[Tuple[str, str], WebElement]
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
 
 DEFAULT_TIMEOUT = 25
+
+# Customer /event list page
+CUSTOMER_EVENTS_H1 = (By.XPATH, "//h1[contains(., 'Available Events')]")
 
 T = TypeVar("T")
 
@@ -73,7 +69,56 @@ def wait_till_element_is_hidden(
 
 def wait_till_url_contains(driver: WebDriver, text: str, *, timeout: float = DEFAULT_TIMEOUT) -> None:
     """Wait until the browser URL contains ``text`` (e.g. ``/event``)."""
-    _wait(driver, timeout).until(lambda d: text in d.current_url)
+
+    def url_ok(d: WebDriver) -> bool:
+        return text in d.current_url
+
+    _wait(driver, timeout).until(url_ok)
+
+
+def _customer_event_grid_ready(driver: WebDriver) -> bool:
+    """Customer /event: at least one card, or the explicit empty state."""
+    return bool(
+        driver.find_elements(By.CSS_SELECTOR, "h2.text-lg.font-semibold.text-stone-900")
+        or driver.find_elements(By.XPATH, "//p[contains(., 'No events found')]")
+    )
+
+
+def wait_till_customer_event_grid_ready(driver: WebDriver, *, timeout: float = DEFAULT_TIMEOUT) -> None:
+    _wait(driver, timeout).until(_customer_event_grid_ready)
+
+
+def wait_till_input_value_equals(
+    driver: WebDriver,
+    locator: Tuple[str, str],
+    expected: str,
+    *,
+    timeout: float = DEFAULT_TIMEOUT,
+) -> None:
+    """Wait until ``<input>`` value equals ``expected`` (uses get_property('value'))."""
+
+    def matches(d: WebDriver) -> bool:
+        return (d.find_element(*locator).get_property("value") or "") == expected
+
+    _wait(driver, timeout).until(matches)
+
+
+def wait_till_nth_select_first_option_contains(
+    driver: WebDriver,
+    select_index: int,
+    text: str,
+    *,
+    timeout: float = DEFAULT_TIMEOUT,
+) -> None:
+    """Wait until ``Select(driver.find_elements('select')[select_index]).first_selected_option`` contains ``text``."""
+
+    def ok(d: WebDriver) -> bool:
+        sels = d.find_elements(By.TAG_NAME, "select")
+        if len(sels) <= select_index:
+            return False
+        return text in Select(sels[select_index]).first_selected_option.text
+
+    _wait(driver, timeout).until(ok)
 
 
 def wait_till_custom_condition(

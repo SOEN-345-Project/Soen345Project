@@ -1,4 +1,15 @@
-"""US-2.3: Set category / location / dates, click Filter after each step; cards match filters."""
+"""
+US-2.3: Apply category / location / start / end filters; cards must match active filters.
+
+Algorithm:
+  1. Require at least one E2E_FILTER_* env value; open /event and wait for grid; assert two <select> elements exist.
+  2. If category set: select first <select>, wait for option text, Filter, scroll.
+  3. If location set: select second <select>, same pattern.
+  4. If start/end dates set: set date inputs via JS, wait_till_input_value_equals, Filter, scroll.
+  5. For each card: if category filter active, card text must contain category; if location filter active, card text must contain location.
+
+Asserts: per-card text contains configured filter substrings when those filters are used.
+"""
 import os
 import time
 
@@ -6,9 +17,15 @@ import pytest
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 
-from support.waits import wait_till_custom_condition, wait_till_element_is_clickable, wait_till_element_is_present
+from support.waits import (
+    CUSTOMER_EVENTS_H1,
+    wait_till_customer_event_grid_ready,
+    wait_till_element_is_clickable,
+    wait_till_element_is_present,
+    wait_till_input_value_equals,
+    wait_till_nth_select_first_option_contains,
+)
 
-WAIT_SECONDS = 10
 FILTER_BTN = (By.XPATH, "//button[normalize-space()='Filter']")
 START_DATE = (By.CSS_SELECTOR, "input[type='date'][title='Start date']")
 END_DATE = (By.CSS_SELECTOR, "input[type='date'][title='End date']")
@@ -38,15 +55,9 @@ def _set_date_value(driver, element, iso_date: str) -> None:
     )
 
 
-def _click_filter_and_wait_for_grid(driver) -> None:
+def _click_filter_and_wait(driver) -> None:
     wait_till_element_is_clickable(driver, FILTER_BTN).click()
-    wait_till_custom_condition(
-        driver,
-        lambda d: bool(
-            d.find_elements(By.CSS_SELECTOR, "h2.text-lg.font-semibold.text-stone-900")
-            or d.find_elements(By.XPATH, "//p[contains(., 'No events found')]")
-        ),
-    )
+    wait_till_customer_event_grid_ready(driver)
 
 
 def _scroll_down_then_up(driver) -> None:
@@ -68,58 +79,37 @@ def test_filter_shows_matching_events(logged_in_customer, base_url):
         )
 
     driver = logged_in_customer
+
     driver.get(f"{base_url}/event")
-
-    wait_till_element_is_present(driver, (By.XPATH, "//h1[contains(., 'Available Events')]"))
-    wait_till_custom_condition(
-        driver,
-        lambda d: bool(
-            d.find_elements(By.CSS_SELECTOR, "h2.text-lg.font-semibold.text-stone-900")
-            or d.find_elements(By.XPATH, "//p[contains(., 'No events found')]")
-        ),
-    )
-
+    wait_till_element_is_present(driver, CUSTOMER_EVENTS_H1)
+    wait_till_customer_event_grid_ready(driver)
     assert len(driver.find_elements(By.TAG_NAME, "select")) >= 2
 
     if f["category"]:
         Select(driver.find_elements(By.TAG_NAME, "select")[0]).select_by_visible_text(f["category"])
-        wait_till_custom_condition(
-            driver,
-            lambda d: f["category"] in Select(d.find_elements(By.TAG_NAME, "select")[0]).first_selected_option.text,
-        )
-        _click_filter_and_wait_for_grid(driver)
+        wait_till_nth_select_first_option_contains(driver, 0, f["category"])
+        _click_filter_and_wait(driver)
         _scroll_down_then_up(driver)
 
     if f["location"]:
         Select(driver.find_elements(By.TAG_NAME, "select")[1]).select_by_visible_text(f["location"])
-        wait_till_custom_condition(
-            driver,
-            lambda d: f["location"] in Select(d.find_elements(By.TAG_NAME, "select")[1]).first_selected_option.text,
-        )
-        _click_filter_and_wait_for_grid(driver)
+        wait_till_nth_select_first_option_contains(driver, 1, f["location"])
+        _click_filter_and_wait(driver)
         _scroll_down_then_up(driver)
 
     if f["start"]:
         el = wait_till_element_is_present(driver, START_DATE)
         _set_date_value(driver, el, f["start"])
-        wait_till_custom_condition(
-            driver,
-            lambda d: (d.find_element(*START_DATE).get_property("value") or "") == f["start"],
-        )
-        _click_filter_and_wait_for_grid(driver)
+        wait_till_input_value_equals(driver, START_DATE, f["start"])
+        _click_filter_and_wait(driver)
         _scroll_down_then_up(driver)
 
     if f["end"]:
         el = wait_till_element_is_present(driver, END_DATE)
         _set_date_value(driver, el, f["end"])
-        wait_till_custom_condition(
-            driver,
-            lambda d: (d.find_element(*END_DATE).get_property("value") or "") == f["end"],
-        )
-        _click_filter_and_wait_for_grid(driver)
+        wait_till_input_value_equals(driver, END_DATE, f["end"])
+        _click_filter_and_wait(driver)
         _scroll_down_then_up(driver)
-
-    time.sleep(WAIT_SECONDS)
 
     titles = driver.find_elements(By.CSS_SELECTOR, "h2.text-lg.font-semibold.text-stone-900")
     if not titles:
