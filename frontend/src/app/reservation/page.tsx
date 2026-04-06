@@ -35,7 +35,8 @@ export default function ReservationsList() {
     const load = useCallback(async () => {
         setError(null);
         try {
-            const data = await fetchMyReservations();
+            const data1 = await fetchMyReservations();
+            const data = data1.filter((c)=> c.status==="RESERVED");
             setReservations(data);
         } catch (err) {
             setError((err as Error).message);
@@ -62,9 +63,7 @@ export default function ReservationsList() {
         setCancellingIds((prev) => new Set(prev).add(id));
         try {
             await cancelReservation1(id);
-            setReservations((prev) =>
-                prev.map((r) => (r.reservationId === id ? { ...r, status: "CANCELLED" } : r))
-            );
+            load();
         } catch (err) {
             setError((err as Error).message);
         } finally {

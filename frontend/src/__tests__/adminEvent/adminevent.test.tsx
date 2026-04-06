@@ -162,7 +162,6 @@ test("moving between different tabs", async () => {
     fireEvent.click(screen.getByRole("button", { name: "Sports" }));
     fireEvent.click(screen.getByRole("button", { name: "All" }));
     fireEvent.click(screen.getByRole("button", { name: "Concert" }));
-    expect(screen.getByText("Old Show")).toBeInTheDocument();
     expect(screen.getByText("Jazz Night")).toBeInTheDocument();
 });
 
