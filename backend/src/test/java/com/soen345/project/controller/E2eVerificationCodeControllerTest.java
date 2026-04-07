@@ -100,4 +100,14 @@ class E2eVerificationCodeControllerTest {
                         .header("X-E2E-Secret", "test-secret-123"))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    void getVerificationCode_notFoundWhenEmailUnknown() throws Exception {
+        when(userRepository.findByEmail("missing@b.com")).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/auth/e2e/verification-code")
+                        .param("email", "missing@b.com")
+                        .header("X-E2E-Secret", "test-secret-123"))
+                .andExpect(status().isNotFound());
+    }
 }

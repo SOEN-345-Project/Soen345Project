@@ -254,6 +254,19 @@
 						<exclude>**/com/sun/tools/**</exclude>
 						<!-- Exclude generated classes -->
 						<exclude>**/*_.*</exclude>
+						<!-- Out of scope: wiring, data carriers, generated repos, E2E helper (see codecov.yml) -->
+						<exclude>**/ProjectApplication.class</exclude>
+						<exclude>**/config/SecurityConfiguration.class</exclude>
+						<exclude>**/config/EmailConfiguration.class</exclude>
+						<exclude>**/config/SwaggerConfig.class</exclude>
+						<exclude>**/repository/**</exclude>
+						<exclude>**/dto/**</exclude>
+						<exclude>**/model/User.class</exclude>
+						<exclude>**/model/Customer.class</exclude>
+						<exclude>**/model/Administrator.class</exclude>
+						<exclude>**/model/Category.class</exclude>
+						<exclude>**/model/Location.class</exclude>
+						<exclude>**/controller/E2eVerificationCodeController.class</exclude>
 					</excludes>
 				</configuration>
 			</plugin>

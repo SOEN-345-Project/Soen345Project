@@ -104,6 +104,20 @@ class AdminEventControllerTest {
 
     @Test
     @WithMockUser(roles = "ADMIN")
+    void cancelEvent_returnsCancelledDto() throws Exception {
+        EventDto dto = new EventDto();
+        dto.setId(8L);
+        dto.setTitle("Off");
+        when(adminEventService.cancelEvent(8L)).thenReturn(dto);
+
+        mockMvc.perform(delete("/api/admin/events/8"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(8))
+                .andExpect(jsonPath("$.title").value("Off"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
     void updateEvent_returnsDto() throws Exception {
         AdminEventRequest req = new AdminEventRequest();
         req.setTitle("Updated");
@@ -122,6 +136,71 @@ class AdminEventControllerTest {
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Updated"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void updateEvent_badRequest_returnsMessage() throws Exception {
+        AdminEventRequest req = new AdminEventRequest();
+        req.setTitle("X");
+        req.setEventDate(LocalDateTime.now().plusDays(1));
+        req.setCategoryId(1L);
+        req.setLocationId(2L);
+        req.setTotalTickets(10);
+        when(adminEventService.updateEvent(eq(9L), any(AdminEventRequest.class)))
+                .thenThrow(new RuntimeException("Event is already cancelled"));
+
+        mockMvc.perform(put("/api/admin/events/9")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("Event is already cancelled"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void getEvent_byId_returnsDto() throws Exception {
+        EventDto dto = new EventDto();
+        dto.setId(42L);
+        dto.setTitle("Solo");
+        dto.setTotalTickets(100);
+        when(adminEventService.getEventById(42L)).thenReturn(dto);
+
+        mockMvc.perform(get("/api/admin/events/42"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(42))
+                .andExpect(jsonPath("$.title").value("Solo"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void getEvent_notFound_returnsBadRequest() throws Exception {
+        when(adminEventService.getEventById(999L)).thenThrow(new RuntimeException("Event not found"));
+
+        mockMvc.perform(get("/api/admin/events/999"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("Event not found"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void createEvent_badRequest_returnsMessage() throws Exception {
+        Administrator admin = adminUser(7L);
+        AdminEventRequest req = new AdminEventRequest();
+        req.setTitle("Bad");
+        req.setEventDate(LocalDateTime.now().plusDays(1));
+        req.setCategoryId(1L);
+        req.setLocationId(2L);
+        req.setTotalTickets(5);
+        when(adminEventService.createEvent(eq(7L), any(AdminEventRequest.class)))
+                .thenThrow(new RuntimeException("Category not found"));
+
+        mockMvc.perform(post("/api/admin/events")
+                        .with(MvcSecuritySupport.principalAsUser(admin))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("Category not found"));
     }
 
     private static Administrator adminUser(long id) {

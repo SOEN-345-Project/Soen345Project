@@ -121,6 +121,17 @@ class ReservationControllerTest {
                 .andExpect(jsonPath("$.reservationId").value(7));
     }
 
+    @Test
+    void cancel_badRequest_returnsMessage() throws Exception {
+        Customer principal = customer(2L);
+        when(reservationService.cancelReservation(2L, 99L))
+                .thenThrow(new RuntimeException("Reservation not found"));
+
+        mockMvc.perform(delete("/api/reservations/99").with(MvcSecuritySupport.principalAsUser(principal)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("Reservation not found"));
+    }
+
     private static Customer customer(long id) {
         Customer c = new Customer();
         c.setId(id);
