@@ -9,6 +9,7 @@ Algorithm:
 Asserts: URL check proves login succeeded and role-based redirect works.
 """
 import os
+import time
 
 from support.env_checks import require_env
 from support.login_helpers import perform_sign_in
@@ -23,3 +24,4 @@ def test_login_redirects_to_dashboard(driver, base_url):
 
     url = driver.current_url
     assert "/event" in url or "/adminEvent" in url
+    time.sleep(1)

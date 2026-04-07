@@ -102,6 +102,87 @@ class EventServiceTest {
         verify(eventRepository).findByLocation(eq(9L), any(LocalDateTime.class));
     }
 
+    @Test
+    void filterEvents_dateRangePlusCategory_filtersPostQuery() {
+        LocalDateTime start = LocalDateTime.now();
+        LocalDateTime end = start.plusDays(2);
+        Event match = new Event();
+        match.setId(1L);
+        match.setTitle("A");
+        match.setDescription("d");
+        match.setEventDate(start.plusHours(1));
+        match.setCategoryId(5L);
+        match.setLocationId(9L);
+        Event other = new Event();
+        other.setId(2L);
+        other.setTitle("B");
+        other.setDescription("d");
+        other.setEventDate(start.plusHours(2));
+        other.setCategoryId(6L);
+        other.setLocationId(9L);
+        when(eventRepository.findByDateRange(start, end)).thenReturn(List.of(match, other));
+        when(categoryRepository.findById(5L)).thenReturn(Optional.of(new Category(5L, "Jazz")));
+        when(locationRepository.findById(9L)).thenReturn(Optional.of(location("Hall", "Mtl")));
+
+        var dtos = eventService.filterEvents(5L, null, start, end);
+
+        assertThat(dtos).hasSize(1);
+        assertThat(dtos.get(0).getTitle()).isEqualTo("A");
+    }
+
+    @Test
+    void filterEvents_dateRangePlusLocation_filtersPostQuery() {
+        LocalDateTime start = LocalDateTime.now();
+        LocalDateTime end = start.plusDays(1);
+        Event match = new Event();
+        match.setId(1L);
+        match.setTitle("Here");
+        match.setDescription("d");
+        match.setEventDate(start);
+        match.setCategoryId(1L);
+        match.setLocationId(20L);
+        Event other = new Event();
+        other.setId(2L);
+        other.setTitle("There");
+        other.setDescription("d");
+        other.setEventDate(start);
+        other.setCategoryId(1L);
+        other.setLocationId(21L);
+        when(eventRepository.findByDateRange(start, end)).thenReturn(List.of(match, other));
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(new Category(1L, "C")));
+        when(locationRepository.findById(20L)).thenReturn(Optional.of(location("V", "City")));
+
+        var dtos = eventService.filterEvents(null, 20L, start, end);
+
+        assertThat(dtos).hasSize(1);
+        assertThat(dtos.get(0).getTitle()).isEqualTo("Here");
+    }
+
+    @Test
+    void filterEvents_noFilters_usesActiveEvents() {
+        when(eventRepository.findActiveEvents(any(LocalDateTime.class))).thenReturn(List.of());
+
+        assertThat(eventService.filterEvents(null, null, null, null)).isEmpty();
+        verify(eventRepository).findActiveEvents(any(LocalDateTime.class));
+    }
+
+    @Test
+    void convertToDto_skipsOptionalCategoryWhenMissing() {
+        Event event = new Event();
+        event.setId(1L);
+        event.setTitle("T");
+        event.setDescription("D");
+        event.setEventDate(LocalDateTime.now());
+        event.setCategoryId(99L);
+        event.setLocationId(null);
+        when(eventRepository.findActiveEvents(any(LocalDateTime.class))).thenReturn(List.of(event));
+        when(categoryRepository.findById(99L)).thenReturn(Optional.empty());
+
+        var dtos = eventService.getAllActiveEvents();
+
+        assertThat(dtos.get(0).getCategoryName()).isNull();
+    }
+
     private static Location location(String venue, String city) {
         Location l = new Location();
         l.setVenueName(venue);

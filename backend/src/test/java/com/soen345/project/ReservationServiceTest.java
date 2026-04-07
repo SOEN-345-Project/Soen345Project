@@ -27,6 +27,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -218,5 +221,149 @@ class ReservationServiceTest {
 
         assertThat(list).hasSize(1);
         assertThat(list.get(0).getEventTitle()).isEqualTo("Gig");
+    }
+
+    @Test
+    void reserveTickets_nullBookedSum_treatsAsZero() throws Exception {
+        Event event = new Event();
+        event.setId(10L);
+        event.setTitle("Concert");
+        event.setEventDate(LocalDateTime.now().plusDays(1));
+        event.setTotalTickets(100);
+        event.setLocationId(5L);
+
+        ReservationRequest request = new ReservationRequest();
+        request.setEventId(10L);
+        request.setQuantity(1);
+
+        when(eventRepository.findById(10L)).thenReturn(Optional.of(event));
+        when(reservationRepository.sumActiveTicketsByEventId(10L)).thenReturn(null);
+
+        Reservation saved = new Reservation();
+        saved.setId(99L);
+        saved.setUserId(1L);
+        saved.setEventId(10L);
+        saved.setQuantity(1);
+        saved.setStatus(Reservation.ReservationStatus.RESERVED);
+        saved.setCreatedAt(LocalDateTime.now());
+        when(reservationRepository.save(any(Reservation.class))).thenReturn(saved);
+
+        Location loc = new Location();
+        loc.setVenueName("Hall");
+        loc.setCity("Montreal");
+        when(locationRepository.findById(5L)).thenReturn(Optional.of(loc));
+
+        Customer user = new Customer();
+        user.setId(1L);
+        user.setEmail("c@example.com");
+        user.setFirstName("Pat");
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        reservationService.reserveTickets(1L, request);
+
+        verify(emailService).sendVerificationEmail(eq("c@example.com"), any(), any());
+    }
+
+    @Test
+    void reserveTickets_skipsNotificationWhenUserMissing() throws Exception {
+        Event event = new Event();
+        event.setId(10L);
+        event.setTitle("Concert");
+        event.setEventDate(LocalDateTime.now().plusDays(1));
+        event.setTotalTickets(100);
+        event.setLocationId(null);
+
+        ReservationRequest request = new ReservationRequest();
+        request.setEventId(10L);
+        request.setQuantity(1);
+
+        when(eventRepository.findById(10L)).thenReturn(Optional.of(event));
+        when(reservationRepository.sumActiveTicketsByEventId(10L)).thenReturn(0);
+
+        Reservation saved = new Reservation();
+        saved.setId(99L);
+        saved.setUserId(99L);
+        saved.setEventId(10L);
+        saved.setQuantity(1);
+        saved.setStatus(Reservation.ReservationStatus.RESERVED);
+        saved.setCreatedAt(LocalDateTime.now());
+        when(reservationRepository.save(any(Reservation.class))).thenReturn(saved);
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+
+        reservationService.reserveTickets(99L, request);
+
+        verify(emailService, never()).sendVerificationEmail(any(), any(), any());
+        verify(smsService, never()).sendVerificationSms(any(), any());
+    }
+
+    @Test
+    void reserveTickets_sendsSmsWhenCustomerHasPhoneOnly() throws Exception {
+        Event event = new Event();
+        event.setId(10L);
+        event.setTitle("Fest");
+        event.setEventDate(LocalDateTime.now().plusDays(1));
+        event.setTotalTickets(50);
+        event.setLocationId(5L);
+
+        ReservationRequest request = new ReservationRequest();
+        request.setEventId(10L);
+        request.setQuantity(1);
+
+        when(eventRepository.findById(10L)).thenReturn(Optional.of(event));
+        when(reservationRepository.sumActiveTicketsByEventId(10L)).thenReturn(0);
+
+        Reservation saved = new Reservation();
+        saved.setId(50L);
+        saved.setUserId(2L);
+        saved.setEventId(10L);
+        saved.setQuantity(1);
+        saved.setStatus(Reservation.ReservationStatus.RESERVED);
+        saved.setCreatedAt(LocalDateTime.now());
+        when(reservationRepository.save(any(Reservation.class))).thenReturn(saved);
+
+        Location loc = new Location();
+        loc.setVenueName("Arena");
+        loc.setCity("X");
+        when(locationRepository.findById(5L)).thenReturn(Optional.of(loc));
+
+        Customer user = new Customer();
+        user.setId(2L);
+        user.setEmail(" ");
+        user.setPhoneNumber("+1666");
+        user.setFirstName("Mo");
+        when(userRepository.findById(2L)).thenReturn(Optional.of(user));
+
+        reservationService.reserveTickets(2L, request);
+
+        verify(smsService).sendVerificationSms(eq("+1666"), contains("Fest"));
+        verify(emailService, never()).sendVerificationEmail(any(), any(), any());
+    }
+
+    @Test
+    void cancelReservation_whenEventGone_stillReturnsCancelled() {
+        Reservation reservation = new Reservation();
+        reservation.setId(7L);
+        reservation.setUserId(2L);
+        reservation.setEventId(999L);
+        reservation.setQuantity(1);
+        reservation.setStatus(Reservation.ReservationStatus.RESERVED);
+        reservation.setCreatedAt(LocalDateTime.now());
+
+        when(reservationRepository.findByIdAndUserId(7L, 2L)).thenReturn(Optional.of(reservation));
+        when(eventRepository.findById(999L)).thenReturn(Optional.empty());
+
+        Reservation updated = new Reservation();
+        updated.setId(7L);
+        updated.setUserId(2L);
+        updated.setEventId(999L);
+        updated.setQuantity(1);
+        updated.setStatus(Reservation.ReservationStatus.CANCELLED);
+        updated.setCreatedAt(reservation.getCreatedAt());
+        when(reservationRepository.save(reservation)).thenReturn(updated);
+
+        ReservationResponse response = reservationService.cancelReservation(2L, 7L);
+
+        assertThat(response.getStatus()).isEqualTo(Reservation.ReservationStatus.CANCELLED);
+        assertThat(response.getEventTitle()).isNull();
     }
 }

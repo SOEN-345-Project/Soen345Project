@@ -39,7 +39,8 @@ def click_reserve_in_modal(driver) -> None:
 
 
 def wait_for_reservation_success(driver) -> None:
-    wait_till_element_is_present(driver, (By.XPATH, "//p[contains(., 'Reservation confirmed!')]"))
+    """Matches reservation.tsx success copy: 'N ticket(s) successfully reserved.'"""
+    wait_till_element_is_visible(driver, (By.XPATH, "//p[contains(., 'successfully reserved')]"))
 
 
 def read_modal_date_and_location_lines(driver) -> tuple[str, str]:
@@ -54,7 +55,7 @@ def read_modal_date_and_location_lines(driver) -> tuple[str, str]:
 def parse_ticket_quantity_from_success_modal(driver) -> int:
     """Parse 'N ticket(s) successfully reserved' after a successful reserve."""
     p = wait_till_element_is_present(driver, (By.XPATH, "//p[contains(., 'successfully reserved')]"))
-    m = re.search(r"(\d+)\s+tickets?\s+successfully reserved", p.text, re.IGNORECASE)
+    m = re.search(r"(\d+)\s+tickets?\s+successfully reserved\.?", p.text, re.IGNORECASE)
     if not m:
         raise AssertionError(f"Could not parse ticket quantity from success text: {p.text!r}")
     return int(m.group(1))
@@ -83,7 +84,7 @@ def wait_for_sold_out_message(driver) -> None:
 
 def click_modal_done(driver) -> None:
     wait_till_element_is_clickable(driver, (By.XPATH, "//button[contains(., 'Done')]")).click()
-    wait_till_element_is_hidden(driver, (By.XPATH, "//p[contains(., 'Reservation confirmed!')]"))
+    wait_till_element_is_hidden(driver, (By.XPATH, "//p[contains(., 'successfully reserved')]"))
 
 
 def wait_reservations_page_ready(driver) -> None:

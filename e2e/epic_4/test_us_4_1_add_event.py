@@ -3,11 +3,11 @@ US-4.1: Admin creates an event → card appears with expected fields.
 
 Algorithm:
   1. require_env for title, datetime, category, location, tickets (optional description).
-  2. goto_admin_events; open add modal; fill form; submit_create_event (waits “Event created!”); close_modal_done.
-  3. wait_till_admin_card_with_title_visible; find card.
+  2. goto_admin_events; open add modal; fill form; submit_create_event; close_modal_done.
+  3. Wait for the new card in the grid; scroll the admin page to the bottom; assert that card is visible.
   4. Assert card text includes title, category, location (or first CSV segment), ticket count, “Status: ACTIVE”.
 
-Asserts: list reflects the created event and shows ACTIVE.
+Asserts: created event is visible after scrolling to the bottom of the list; content and ACTIVE status.
 """
 import os
 
@@ -17,7 +17,9 @@ from epic_4.admin_helpers import (
     find_admin_event_card,
     goto_admin_events,
     open_add_event_modal,
+    scroll_admin_page_to_bottom_once,
     submit_create_event,
+    wait_admin_event_grid_ready,
     wait_till_admin_card_with_title_visible,
 )
 from support.env_checks import require_env
@@ -55,8 +57,12 @@ def test_add_event_appears_in_admin_list(logged_in_admin, base_url):
     close_modal_done(driver)
 
     wait_till_admin_card_with_title_visible(driver, title)
+    wait_admin_event_grid_ready(driver)
+    scroll_admin_page_to_bottom_once(driver, wait_for_grid=False)
+
     card = find_admin_event_card(driver, title)
     assert card is not None
+    assert card.is_displayed(), f"Expected event card {title!r} to be visible after scrolling to bottom"
 
     assert title in card.text
     assert category in card.text
