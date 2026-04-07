@@ -83,12 +83,38 @@ class AuthenticationServiceTest {
     }
 
     @Test
+    void signup_phone_blankString_requiresPhoneNumber() {
+        RegisterUserDto dto = new RegisterUserDto();
+        dto.setVerificationMethod("PHONE");
+        dto.setFirstName("A");
+        dto.setLastName("B");
+        dto.setPassword("p");
+        dto.setPhoneNumber("");
+
+        assertThatThrownBy(() -> authenticationService.signup(dto))
+                .hasMessageContaining("Phone number is required");
+    }
+
+    @Test
     void signup_email_requiresEmail() {
         RegisterUserDto dto = new RegisterUserDto();
         dto.setVerificationMethod("EMAIL");
         dto.setFirstName("A");
         dto.setLastName("B");
         dto.setPassword("p");
+
+        assertThatThrownBy(() -> authenticationService.signup(dto))
+                .hasMessageContaining("Email is required");
+    }
+
+    @Test
+    void signup_email_blankString_requiresEmail() {
+        RegisterUserDto dto = new RegisterUserDto();
+        dto.setVerificationMethod("EMAIL");
+        dto.setFirstName("A");
+        dto.setLastName("B");
+        dto.setPassword("p");
+        dto.setEmail("");
 
         assertThatThrownBy(() -> authenticationService.signup(dto))
                 .hasMessageContaining("Email is required");
@@ -129,6 +155,23 @@ class AuthenticationServiceTest {
 
         assertThat(out).isSameAs(user);
         verify(authenticationManager, never()).authenticate(any());
+    }
+
+    @Test
+    void authenticate_phone_throwsWhenNotVerified() {
+        LoginUserDto dto = new LoginUserDto();
+        dto.setPhoneNumber("+1666");
+        dto.setPassword("secret");
+
+        Customer user = new Customer();
+        user.setPhoneNumber("+1666");
+        user.setPassword("hash");
+        user.setEnabled(false);
+        when(userRepository.findByPhoneNumber("+1666")).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> authenticationService.authenticate(dto))
+                .hasMessageContaining("User not verified");
+        verify(passwordEncoder, never()).matches(any(), any());
     }
 
     @Test
@@ -344,6 +387,20 @@ class AuthenticationServiceTest {
         authenticationService.resendVerificationCode(null, "+1888");
 
         verify(smsService).sendVerificationSms(eq("+1888"), any());
+    }
+
+    @Test
+    void resendVerificationCode_blankEmail_routesToPhone() throws Exception {
+        Customer user = new Customer();
+        user.setEnabled(false);
+        user.setPhoneNumber("+1999");
+        when(userRepository.findByPhoneNumber("+1999")).thenReturn(Optional.of(user));
+        when(userRepository.save(any(Customer.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        authenticationService.resendVerificationCode("   ", "+1999");
+
+        verify(smsService).sendVerificationSms(eq("+1999"), any());
+        verify(emailService, never()).sendVerificationEmail(any(), any(), any());
     }
 
     @Test

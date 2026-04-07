@@ -87,6 +87,24 @@ class JwtServiceTest {
     }
 
     @Test
+    void isTokenValid_returnsFalseWhenTokenExpired() {
+        Customer user = new Customer();
+        user.setId(1L);
+        user.setEmail("expired@example.com");
+        user.setPassword("p");
+        user.setFirstName("A");
+        user.setLastName("B");
+        user.setEnabled(true);
+
+        long savedExpiration = jwtService.getExpirationTime();
+        ReflectionTestUtils.setField(jwtService, "jwtExpiration", -1L);
+        String staleToken = jwtService.generateToken(user);
+        ReflectionTestUtils.setField(jwtService, "jwtExpiration", savedExpiration);
+
+        assertThat(jwtService.isTokenValid(staleToken, user)).isFalse();
+    }
+
+    @Test
     void generateToken_usesSpringSecurityUsernameWhenNotProjectUser() {
         UserDetails generic = User.builder()
                 .username("generic-subject")

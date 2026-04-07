@@ -14,6 +14,7 @@ import com.soen345.project.repository.ReservationRepository;
 import com.soen345.project.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -27,6 +28,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -250,6 +253,70 @@ class AdminEventServiceTest {
         adminEventService.cancelEvent(3L);
 
         verify(smsService).sendVerificationSms(eq("+1777"), contains("cancelled"));
+    }
+
+    @Test
+    void cancelEvent_ignoresAlreadyCancelledReservations() {
+        Event event = new Event();
+        event.setId(40L);
+        event.setTitle("Mix");
+        event.setStatus(Event.EventStatus.ACTIVE);
+        event.setLocationId(2L);
+        event.setEventDate(LocalDateTime.now());
+        when(eventRepository.findById(40L)).thenReturn(Optional.of(event));
+        when(locationRepository.findById(2L)).thenReturn(Optional.of(loc()));
+
+        Reservation wasCancelled = new Reservation();
+        wasCancelled.setId(1L);
+        wasCancelled.setUserId(100L);
+        wasCancelled.setEventId(40L);
+        wasCancelled.setStatus(Reservation.ReservationStatus.CANCELLED);
+
+        Reservation active = new Reservation();
+        active.setId(2L);
+        active.setUserId(101L);
+        active.setEventId(40L);
+        active.setStatus(Reservation.ReservationStatus.RESERVED);
+
+        when(reservationRepository.findByEventId(40L)).thenReturn(List.of(wasCancelled, active));
+        when(eventRepository.save(any(Event.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        adminEventService.cancelEvent(40L);
+
+        ArgumentCaptor<Reservation> captor = ArgumentCaptor.forClass(Reservation.class);
+        verify(reservationRepository, times(1)).save(captor.capture());
+        assertThat(captor.getValue().getId()).isEqualTo(2L);
+        assertThat(captor.getValue().getStatus()).isEqualTo(Reservation.ReservationStatus.CANCELLED);
+    }
+
+    @Test
+    void cancelEvent_skipsNotificationWhenUserHasNoEmailNorPhone() throws Exception {
+        Event event = new Event();
+        event.setId(41L);
+        event.setTitle("Quiet");
+        event.setStatus(Event.EventStatus.ACTIVE);
+        event.setLocationId(null);
+        event.setEventDate(LocalDateTime.now());
+        when(eventRepository.findById(41L)).thenReturn(Optional.of(event));
+
+        Reservation active = new Reservation();
+        active.setId(50L);
+        active.setUserId(200L);
+        active.setEventId(41L);
+        active.setStatus(Reservation.ReservationStatus.RESERVED);
+        when(reservationRepository.findByEventId(41L)).thenReturn(List.of(active));
+        when(eventRepository.save(any(Event.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Customer silent = new Customer();
+        silent.setFirstName("X");
+        silent.setEmail(null);
+        silent.setPhoneNumber(null);
+        when(userRepository.findById(200L)).thenReturn(Optional.of(silent));
+
+        adminEventService.cancelEvent(41L);
+
+        verify(emailService, never()).sendVerificationEmail(any(), any(), any());
+        verify(smsService, never()).sendVerificationSms(any(), any());
     }
 
     private static AdminEventRequest request() {

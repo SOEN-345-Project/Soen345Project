@@ -58,4 +58,19 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.email").value("jane@example.com"))
                 .andExpect(jsonPath("$.role").value("ROLE_CUSTOMER"));
     }
+
+    @Test
+    void me_withUser_nullEmail_returnsEmptyEmail() throws Exception {
+        Customer c = new Customer();
+        c.setId(9L);
+        c.setFirstName("No");
+        c.setLastName("Mail");
+        c.setEmail(null);
+        c.setPassword("x");
+        c.setEnabled(true);
+
+        mockMvc.perform(get("/api/users/me").with(MvcSecuritySupport.principalAsUser(c)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value(""));
+    }
 }
