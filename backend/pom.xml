@@ -223,21 +223,24 @@
 						<configuration>
 							<rules>
 								<rule>
-									<element>PACKAGE</element>
+									<element>BUNDLE</element>
 									<limits>
 										<limit>
 											<counter>LINE</counter>
 											<value>COVEREDRATIO</value>
-											<minimum>0.20</minimum>
+											<minimum>0.80</minimum>
+										</limit>
+										<limit>
+											<counter>INSTRUCTION</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>0.80</minimum>
+										</limit>
+										<limit>
+											<counter>BRANCH</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>0.80</minimum>
 										</limit>
 									</limits>
-									<excludes>
-										<exclude>com.soen345.project.config</exclude>
-										<exclude>com.soen345.project.service</exclude>
-										<exclude>com.soen345.project.controller</exclude>
-										<exclude>com.soen345.project.dto</exclude>
-										<exclude>com.soen345.project.model</exclude>
-									</excludes>
 								</rule>
 							</rules>
 						</configuration>

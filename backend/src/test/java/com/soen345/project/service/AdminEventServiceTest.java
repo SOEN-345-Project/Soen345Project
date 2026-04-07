@@ -3,6 +3,7 @@ package com.soen345.project.service;
 import com.soen345.project.dto.AdminEventRequest;
 import com.soen345.project.dto.EventDto;
 import com.soen345.project.model.Category;
+import com.soen345.project.model.Customer;
 import com.soen345.project.model.Event;
 import com.soen345.project.model.Location;
 import com.soen345.project.model.Reservation;
@@ -24,6 +25,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -122,6 +125,131 @@ class AdminEventServiceTest {
 
         assertThatThrownBy(() -> adminEventService.getEventById(1L))
                 .hasMessageContaining("Event not found");
+    }
+
+    @Test
+    void getEventById_returnsDto() {
+        Event event = new Event();
+        event.setId(7L);
+        event.setTitle("Gig");
+        event.setDescription("D");
+        event.setEventDate(LocalDateTime.now());
+        event.setCategoryId(1L);
+        event.setLocationId(2L);
+        event.setTotalTickets(10);
+        event.setStatus(Event.EventStatus.ACTIVE);
+        when(eventRepository.findById(7L)).thenReturn(Optional.of(event));
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(new Category(1L, "Music")));
+        when(locationRepository.findById(2L)).thenReturn(Optional.of(loc()));
+
+        EventDto dto = adminEventService.getEventById(7L);
+
+        assertThat(dto.getTitle()).isEqualTo("Gig");
+        assertThat(dto.getCategoryName()).isEqualTo("Music");
+    }
+
+    @Test
+    void getAllEvents_mapsAll() {
+        Event event = new Event();
+        event.setId(1L);
+        event.setTitle("T");
+        event.setDescription("D");
+        event.setEventDate(LocalDateTime.now());
+        event.setCategoryId(1L);
+        event.setLocationId(2L);
+        event.setTotalTickets(5);
+        event.setStatus(Event.EventStatus.ACTIVE);
+        when(eventRepository.findAll()).thenReturn(List.of(event));
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(new Category(1L, "Cat")));
+        when(locationRepository.findById(2L)).thenReturn(Optional.of(loc()));
+
+        assertThat(adminEventService.getAllEvents()).hasSize(1);
+    }
+
+    @Test
+    void updateEvent_appliesChangesWhenActive() {
+        Event existing = new Event();
+        existing.setId(4L);
+        existing.setStatus(Event.EventStatus.ACTIVE);
+        when(eventRepository.findById(4L)).thenReturn(Optional.of(existing));
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(new Category(1L, "Cat")));
+        when(locationRepository.findById(2L)).thenReturn(Optional.of(loc()));
+        when(eventRepository.save(any(Event.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        EventDto dto = adminEventService.updateEvent(4L, request());
+
+        assertThat(dto.getTitle()).isEqualTo("Title");
+        verify(eventRepository).save(existing);
+    }
+
+    @Test
+    void createEvent_throwsWhenLocationMissing() {
+        AdminEventRequest req = request();
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(new Category(1L, "Cat")));
+        when(locationRepository.findById(2L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> adminEventService.createEvent(1L, req))
+                .hasMessageContaining("Location not found");
+    }
+
+    @Test
+    void cancelEvent_notifiesCustomerByEmail() throws Exception {
+        Event event = new Event();
+        event.setId(3L);
+        event.setTitle("Party");
+        event.setStatus(Event.EventStatus.ACTIVE);
+        event.setLocationId(2L);
+        event.setEventDate(LocalDateTime.now());
+        when(eventRepository.findById(3L)).thenReturn(Optional.of(event));
+        when(locationRepository.findById(2L)).thenReturn(Optional.of(loc()));
+
+        Reservation active = new Reservation();
+        active.setId(10L);
+        active.setUserId(5L);
+        active.setEventId(3L);
+        active.setQuantity(2);
+        active.setStatus(Reservation.ReservationStatus.RESERVED);
+        when(reservationRepository.findByEventId(3L)).thenReturn(List.of(active));
+        when(eventRepository.save(any(Event.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Customer cust = new Customer();
+        cust.setFirstName("Sam");
+        cust.setEmail("sam@example.com");
+        when(userRepository.findById(5L)).thenReturn(Optional.of(cust));
+
+        adminEventService.cancelEvent(3L);
+
+        verify(emailService).sendVerificationEmail(eq("sam@example.com"), any(), contains("cancelled"));
+    }
+
+    @Test
+    void cancelEvent_notifiesCustomerBySmsWhenNoEmail() throws Exception {
+        Event event = new Event();
+        event.setId(3L);
+        event.setTitle("Show");
+        event.setStatus(Event.EventStatus.ACTIVE);
+        event.setLocationId(null);
+        event.setEventDate(LocalDateTime.now());
+        when(eventRepository.findById(3L)).thenReturn(Optional.of(event));
+
+        Reservation active = new Reservation();
+        active.setId(11L);
+        active.setUserId(6L);
+        active.setEventId(3L);
+        active.setQuantity(1);
+        active.setStatus(Reservation.ReservationStatus.RESERVED);
+        when(reservationRepository.findByEventId(3L)).thenReturn(List.of(active));
+        when(eventRepository.save(any(Event.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Customer cust = new Customer();
+        cust.setFirstName("Mo");
+        cust.setEmail(" ");
+        cust.setPhoneNumber("+1777");
+        when(userRepository.findById(6L)).thenReturn(Optional.of(cust));
+
+        adminEventService.cancelEvent(3L);
+
+        verify(smsService).sendVerificationSms(eq("+1777"), contains("cancelled"));
     }
 
     private static AdminEventRequest request() {
