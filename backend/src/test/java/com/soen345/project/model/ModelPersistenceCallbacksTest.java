@@ -61,6 +61,16 @@ class ModelPersistenceCallbacksTest {
         assertThat(reservation.getStatus()).isEqualTo(Reservation.ReservationStatus.RESERVED);
     }
 
+    @Test
+    void reservationOnCreate_keepsExplicitStatus() throws Exception {
+        Reservation reservation = new Reservation();
+        reservation.setStatus(Reservation.ReservationStatus.CANCELLED);
+        invoke(reservation, "onCreate");
+
+        assertThat(reservation.getStatus()).isEqualTo(Reservation.ReservationStatus.CANCELLED);
+        assertThat(reservation.getCreatedAt()).isNotNull();
+    }
+
     private static void invoke(Object target, String method) throws Exception {
         Method m = target.getClass().getDeclaredMethod(method);
         m.setAccessible(true);

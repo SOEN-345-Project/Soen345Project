@@ -55,4 +55,18 @@ class EventControllerTest {
         mockMvc.perform(get("/api/events/search").param("keyword", "jazz"))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    void filterEvents_passesParamsToService() throws Exception {
+        LocalDateTime start = LocalDateTime.parse("2026-06-01T18:00:00");
+        LocalDateTime end = LocalDateTime.parse("2026-06-30T22:00:00");
+        when(eventService.filterEvents(1L, 2L, start, end)).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/events/filter")
+                        .param("categoryId", "1")
+                        .param("locationId", "2")
+                        .param("startDate", "2026-06-01T18:00:00")
+                        .param("endDate", "2026-06-30T22:00:00"))
+                .andExpect(status().isOk());
+    }
 }
