@@ -1,2 +1,5 @@
 .idea/
 *.iml
+
+# Local secrets (Spring optional:file:.env)
+backend/.env

@@ -1,0 +1,4 @@
+[tool.pytest.ini_options]
+testpaths = ["epic_1", "epic_2", "epic_3", "epic_4"]
+python_files = ["test_*.py"]
+addopts = ["-v", "--tb=short"]

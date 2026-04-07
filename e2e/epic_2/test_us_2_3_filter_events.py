@@ -1,0 +1,126 @@
+"""
+US-2.3: Apply category / location / start / end filters; cards must match active filters.
+
+Algorithm:
+  1. Require at least one E2E_FILTER_* env value; open /event and wait for grid; assert two <select> elements exist.
+  2. If category set: select first <select>, wait for option text, Filter, scroll.
+  3. If location set: select second <select>, same pattern.
+  4. If start/end dates set: set date inputs via JS, wait_till_input_value_equals, Filter, scroll.
+  5. For each card: if category filter active, card text must contain category; if location filter active, card text must contain location.
+
+Asserts: per-card text contains configured filter substrings when those filters are used.
+"""
+import os
+import time
+
+import pytest
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import Select
+
+from support.waits import (
+    CUSTOMER_EVENTS_H1,
+    wait_till_customer_event_grid_ready,
+    wait_till_element_is_clickable,
+    wait_till_element_is_present,
+    wait_till_input_value_equals,
+    wait_till_nth_select_first_option_contains,
+)
+
+FILTER_BTN = (By.XPATH, "//button[normalize-space()='Filter']")
+START_DATE = (By.CSS_SELECTOR, "input[type='date'][title='Start date']")
+END_DATE = (By.CSS_SELECTOR, "input[type='date'][title='End date']")
+
+
+def _filter_env():
+    return {
+        "category": os.environ.get("E2E_FILTER_CATEGORY_NAME", "").strip(),
+        "location": os.environ.get("E2E_FILTER_LOCATION_NAME", "").strip(),
+        "start": os.environ.get("E2E_FILTER_START_DATE", "").strip(),
+        "end": os.environ.get("E2E_FILTER_END_DATE", "").strip(),
+    }
+
+
+def _set_date_value(driver, element, iso_date: str) -> None:
+    driver.execute_script(
+        """
+        const el = arguments[0];
+        const val = arguments[1];
+        const d = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value');
+        d.set.call(el, val);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        """,
+        element,
+        iso_date,
+    )
+
+
+def _click_filter_and_wait(driver) -> None:
+    wait_till_element_is_clickable(driver, FILTER_BTN).click()
+    wait_till_customer_event_grid_ready(driver)
+
+
+def _scroll_down_then_up(driver) -> None:
+    driver.execute_script(
+        "const h = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);"
+        "window.scrollTo(0, h);"
+    )
+    time.sleep(0.15)
+    driver.execute_script("window.scrollTo(0, 0);")
+    time.sleep(0.15)
+
+
+def test_filter_shows_matching_events(logged_in_customer, base_url):
+    f = _filter_env()
+    if not any(f.values()):
+        pytest.skip(
+            "Set at least one of E2E_FILTER_CATEGORY_NAME, E2E_FILTER_LOCATION_NAME, "
+            "E2E_FILTER_START_DATE, E2E_FILTER_END_DATE in e2e/.env"
+        )
+
+    driver = logged_in_customer
+
+    driver.get(f"{base_url}/event")
+    wait_till_element_is_present(driver, CUSTOMER_EVENTS_H1)
+    wait_till_customer_event_grid_ready(driver)
+    assert len(driver.find_elements(By.TAG_NAME, "select")) >= 2
+
+    if f["category"]:
+        Select(driver.find_elements(By.TAG_NAME, "select")[0]).select_by_visible_text(f["category"])
+        wait_till_nth_select_first_option_contains(driver, 0, f["category"])
+        _click_filter_and_wait(driver)
+        _scroll_down_then_up(driver)
+
+    if f["location"]:
+        Select(driver.find_elements(By.TAG_NAME, "select")[1]).select_by_visible_text(f["location"])
+        wait_till_nth_select_first_option_contains(driver, 1, f["location"])
+        _click_filter_and_wait(driver)
+        _scroll_down_then_up(driver)
+
+    if f["start"]:
+        el = wait_till_element_is_present(driver, START_DATE)
+        _set_date_value(driver, el, f["start"])
+        wait_till_input_value_equals(driver, START_DATE, f["start"])
+        _click_filter_and_wait(driver)
+        _scroll_down_then_up(driver)
+
+    if f["end"]:
+        el = wait_till_element_is_present(driver, END_DATE)
+        _set_date_value(driver, el, f["end"])
+        wait_till_input_value_equals(driver, END_DATE, f["end"])
+        _click_filter_and_wait(driver)
+        _scroll_down_then_up(driver)
+
+    titles = driver.find_elements(By.CSS_SELECTOR, "h2.text-lg.font-semibold.text-stone-900")
+    if not titles:
+        pytest.skip("No events after filter; adjust E2E_FILTER_* in e2e/.env")
+
+    cat = f["category"].lower()
+    loc = f["location"].lower()
+    for h2 in titles:
+        card = h2.find_element(By.XPATH, "./ancestor::div[contains(@class,'rounded-2xl')][1]")
+        text = card.text.lower()
+        if cat:
+            assert cat in text, f"Category filter: expected {f['category']!r} in card"
+        if loc:
+            assert loc in text, f"Location filter: expected {f['location']!r} in card"

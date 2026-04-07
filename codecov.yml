@@ -15,10 +15,19 @@ comment:
 
 ignore:
   - "backend/src/test/**"
+  # Backend: excluded from coverage targets (wiring, data carriers, Spring Data repos, E2E-only controller)
   - "backend/src/main/java/com/soen345/project/ProjectApplication.java"
-  - "backend/src/main/java/com/soen345/project/config/**"
+  - "backend/src/main/java/com/soen345/project/config/SecurityConfiguration.java"
+  - "backend/src/main/java/com/soen345/project/config/EmailConfiguration.java"
+  - "backend/src/main/java/com/soen345/project/config/SwaggerConfig.java"
   - "backend/src/main/java/com/soen345/project/dto/**"
-  - "backend/src/main/java/com/soen345/project/model/**"
+  - "backend/src/main/java/com/soen345/project/repository/**"
+  - "backend/src/main/java/com/soen345/project/model/User.java"
+  - "backend/src/main/java/com/soen345/project/model/Customer.java"
+  - "backend/src/main/java/com/soen345/project/model/Administrator.java"
+  - "backend/src/main/java/com/soen345/project/model/Category.java"
+  - "backend/src/main/java/com/soen345/project/model/Location.java"
+  - "backend/src/main/java/com/soen345/project/controller/E2eVerificationCodeController.java"
   - "frontend/src/lib/**"
   - "frontend/src/app/page.tsx"
   - "frontend/src/app/layout.tsx"

@@ -1,6 +1,6 @@
 // ReservationModal.test.tsx
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import ReservationModal from "./reservation";
+import ReservationModal from "../../app/reservation/reservation";
 import * as axiosLib from "@/lib/axios";
 import "@testing-library/jest-dom";
 jest.mock("@/lib/axios", () => ({
@@ -94,7 +94,7 @@ describe("Reservation Modal testing", () => {
         fireEvent.click(screen.getByText("Reserve 1 ticket"));
 
         await waitFor(() => {
-            expect(screen.getByText("Reservation confirmed!")).toBeInTheDocument();
+            expect(screen.getByText("A confirmation has been sent to your email.")).toBeInTheDocument();
         });
     });
 

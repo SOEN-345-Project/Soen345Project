@@ -2,7 +2,7 @@ import React from "react";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import '@testing-library/jest-dom';
-import SignUpPage from "./page";
+import SignUpPage from "../../app/signup/page";
 import { signup, verify, resendCode } from "@/lib/axios";
 
 const mockPush = jest.fn();

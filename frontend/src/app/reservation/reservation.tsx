@@ -2,14 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { EventDto, ReservationRequest, createReservation } from "@/lib/axios";
-
-const formatDate = (iso: string) => {
-    const d = new Date(iso);
-    return {
-        full: d.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
-        time: d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
-    };
-};
+import {formatDateReservation} from "@/app/utils";
 
 interface ReservationModalProps {
     event: EventDto | null;
@@ -39,7 +32,7 @@ export default function ReservationModal({ event, onClose}: ReservationModalProp
 
     if (!event) return null;
 
-    const dt = formatDate(event.eventDate);
+    const dt = formatDateReservation(event.eventDate);
     const maxTickets = event.totalTickets ?? 10;
 
     const handleConfirm = async () => {
@@ -88,7 +81,7 @@ export default function ReservationModal({ event, onClose}: ReservationModalProp
 
                 {status === "success" ? (
                     <div style={{ textAlign: "center" }}>
-                        <p style={{ color: "#15803d", fontWeight: 600, marginBottom: 4 }}>Reservation confirmed!</p>
+                        <p style={{ color: "#15803d", fontWeight: 600, marginBottom: 4 }}>A confirmation has been sent to your email.</p>
                         <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 16 }}>{ticketCount} ticket{ticketCount !== 1 ? "s" : ""} successfully reserved.</p>
                         <button onClick={onClose} style={{ width: "100%", padding: "8px 0", backgroundColor: "#15803d", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 14 }}>Done</button>
                     </div>

@@ -170,6 +170,7 @@ public class AdminEventService {
         dto.setDescription(event.getDescription());
         dto.setEventDate(event.getEventDate());
         dto.setTotalTickets(event.getTotalTickets());
+        dto.setStatus(event.getStatus());
 
         if (event.getCategoryId() != null) {
             categoryRepository.findById(event.getCategoryId())

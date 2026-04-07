@@ -2,7 +2,7 @@ import React from "react";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { getEveryEvents, cancelEvent, createEvent, updateEvent } from "@/lib/axios";
-import AdminEventsPage from "./page";
+import AdminEventsPage from "../../app/adminEvent/page";
 
 const mockPush = jest.fn();
 
@@ -17,7 +17,7 @@ jest.mock("@/lib/axios", () => ({
     updateEvent:    jest.fn(),
 }));
 
-jest.mock("../reservation/reservation", () => ({
+jest.mock("../../app/reservation/reservation", () => ({
     __esModule: true,
     default: () => null,
 }));
@@ -162,7 +162,6 @@ test("moving between different tabs", async () => {
     fireEvent.click(screen.getByRole("button", { name: "Sports" }));
     fireEvent.click(screen.getByRole("button", { name: "All" }));
     fireEvent.click(screen.getByRole("button", { name: "Concert" }));
-    expect(screen.getByText("Old Show")).toBeInTheDocument();
     expect(screen.getByText("Jazz Night")).toBeInTheDocument();
 });
 

@@ -1,19 +1,9 @@
 "use client";
-import ReservationModal from "@/app/reservation/reservation";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { cancelEvent, getEveryEvents, EventDto } from "@/lib/axios";
 import EventFormModal from "@/app/adminEvent/eventAddModify";
-
-const formatDate = (iso: string) => {
-    const d = new Date(iso);
-    return {
-        day:   d.toLocaleDateString("en-US", { day: "2-digit" }),
-        month: d.toLocaleDateString("en-US", { month: "short" }).toUpperCase(),
-        full:  d.toLocaleDateString("en-US", { weekday: "short", month: "long", day: "numeric" }),
-        time:  d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
-    };
-};
+import { formatDate } from "../utils";
 
 const CATEGORY_COLORS: Record<string, { dot: string; text: string; bg: string; border: string }> = {
     "Concert": { dot: "bg-violet-400", text: "text-violet-600", bg: "bg-violet-50", border: "border-violet-200" },
@@ -23,17 +13,6 @@ const CATEGORY_COLORS: Record<string, { dot: string; text: string; bg: string; b
     "Festival": { dot: "bg-orange-400", text: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200" },
 };
 
-const fakeEvent: EventDto = {
-    id: 42,
-    title: "Jazz Night at Bell Centre",
-    description: "An unforgettable evening of live jazz with world-class musicians.",
-    eventDate: "2025-08-15T20:00:00",
-    categoryName: "Concert",
-    locationName: "Bell Centre",
-    city: "Montreal",
-    totalTickets: 120,
-    status: "ACTIVE",
-};
 const AdminEventsPage = () => {
     const router = useRouter();
     const [modal, setModal] = useState<{ mode: "add" | "modify"; event: EventDto | null } | null>(null);
@@ -48,7 +27,8 @@ const AdminEventsPage = () => {
         setLoading(true);
         setError(null);
         try {
-            const events = await getEveryEvents() as EventDto[];
+            const events1 = await getEveryEvents() as EventDto[];
+            const events = events1.filter((c)=> c.status==="ACTIVE");
             setAllEvents(events);
             setDisplayEvents(events);
             const cats = ["All", ...Array.from(new Set(events.map((e) => e.categoryName).filter((c): c is string => Boolean(c))))];
