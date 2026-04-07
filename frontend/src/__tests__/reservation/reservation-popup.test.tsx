@@ -94,7 +94,7 @@ describe("Reservation Modal testing", () => {
         fireEvent.click(screen.getByText("Reserve 1 ticket"));
 
         await waitFor(() => {
-            expect(screen.getByText("Reservation confirmed!")).toBeInTheDocument();
+            expect(screen.getByText("A confirmation has been sent to your email.")).toBeInTheDocument();
         });
     });
 
