@@ -2,6 +2,7 @@ import React from "react";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
+import type { MockedFunction } from "jest-mock";
 
 
 jest.mock("next/navigation", () => ({
@@ -25,6 +26,9 @@ import { getAllEvents, searchEvents, filterEvents } from "@/lib/axios";
 import EventsPage from "../../app/event/page";
 
 const mockPush = jest.fn();
+const mockGetAllEvents = getAllEvents as MockedFunction<typeof getAllEvents>;
+const mockSearchEvents = searchEvents as MockedFunction<typeof searchEvents>;
+const mockFilterEvents = filterEvents as MockedFunction<typeof filterEvents>;
 
 const MOCK_EVENTS = [
     {
@@ -36,6 +40,7 @@ const MOCK_EVENTS = [
         city: "Montreal",
         eventDate: "2025-08-15T20:00:00",
         totalTickets: 200,
+        status: "ACTIVE",
     },
     {
         id: 2,
@@ -46,14 +51,15 @@ const MOCK_EVENTS = [
         city: "Montreal",
         eventDate: "2025-09-01T15:00:00",
         totalTickets: 1000,
+        status: "ACTIVE",
     },
 ];
 
 beforeEach(() => {
     jest.clearAllMocks();
-    (getAllEvents as jest.Mock).mockResolvedValue(MOCK_EVENTS);
-    (searchEvents as jest.Mock).mockResolvedValue([]);
-    (filterEvents as jest.Mock).mockResolvedValue([]);
+    mockGetAllEvents.mockResolvedValue(MOCK_EVENTS);
+    mockSearchEvents.mockResolvedValue([]);
+    mockFilterEvents.mockResolvedValue([]);
 
     Storage.prototype.getItem = jest.fn((key: string) => {
         switch (key) {
@@ -81,7 +87,7 @@ test("Checking that the page loads correctly", async () => {
 });
 
 test("Shows no events message when empty", async () => {
-    (getAllEvents as jest.Mock).mockResolvedValue([]);
+    mockGetAllEvents.mockResolvedValue([]);
     render(<EventsPage />);
 
     const message = await screen.findByText(/no events found/i);
@@ -118,7 +124,7 @@ test("shows event cards once the fetch completes (Happy path)", async () => {
 });
 
 test("shows an error message when the fetch fails", async () => {
-    (getAllEvents as jest.Mock).mockRejectedValue(new Error("Network error"));
+    mockGetAllEvents.mockRejectedValue(new Error("Network error"));
     render(<EventsPage />);
     await screen.findByText(/network error/i);
     expect(screen.queryByText("Champions Cup")).not.toBeInTheDocument();
@@ -126,7 +132,7 @@ test("shows an error message when the fetch fails", async () => {
 });
 
 test("Trims the keyword before calling the search API", async () => {
-    (searchEvents as jest.Mock).mockResolvedValue([MOCK_EVENTS[0]]);
+    mockSearchEvents.mockResolvedValue([MOCK_EVENTS[0]]);
     render(<EventsPage />);
     await screen.findByText("Jazz Night");
 
@@ -137,7 +143,7 @@ test("Trims the keyword before calling the search API", async () => {
 });
 
 test("Search for a particular Event using the search bar (Happy Path)", async() =>{
-    (searchEvents as jest.Mock).mockResolvedValue([MOCK_EVENTS[1]]);
+    mockSearchEvents.mockResolvedValue([MOCK_EVENTS[1]]);
     render(<EventsPage />);
     await screen.findByText("Jazz Night");
 
@@ -149,7 +155,7 @@ test("Search for a particular Event using the search bar (Happy Path)", async() 
 })
 
 test("Search for a particular Event using the search bar and fails due to wrong search", async() =>{
-    (searchEvents as jest.Mock).mockResolvedValue([]);
+    mockSearchEvents.mockResolvedValue([]);
     render(<EventsPage />);
     await screen.findByText("Jazz Night");
 
@@ -161,7 +167,7 @@ test("Search for a particular Event using the search bar and fails due to wrong 
 })
 
 test("Search for a particular Event using the search bar and fails due to network error", async() =>{
-    (searchEvents as jest.Mock).mockRejectedValueOnce(new Error("Network error"));
+    mockSearchEvents.mockRejectedValueOnce(new Error("Network error"));
     render(<EventsPage />);
     await screen.findByText("Jazz Night");
 
@@ -182,11 +188,11 @@ test("Call the filter API when the keyword is blank", async () => {
     render(<EventsPage />);
     await screen.findByText("Jazz Night");
     fireEvent.click(screen.getByRole("button", { name: /^filter$/i }));
-    expect(filterEvents as jest.Mock).toHaveBeenCalled();
+    expect(mockFilterEvents).toHaveBeenCalled();
 });
 
 test("passes the selected category to the filter API (Happy path)", async () => {
-    (filterEvents as jest.Mock).mockResolvedValue([MOCK_EVENTS[0]]);
+    mockFilterEvents.mockResolvedValue([MOCK_EVENTS[0]]);
     render(<EventsPage />);
     await screen.findByText("Jazz Night");
 
@@ -199,7 +205,7 @@ test("passes the selected category to the filter API (Happy path)", async () => 
 });
 
 test("passes the selected category to the filter API which is invalid", async () => {
-    (filterEvents as jest.Mock).mockResolvedValue([]);
+    mockFilterEvents.mockResolvedValue([]);
     render(<EventsPage />);
     await screen.findByText("Jazz Night");
 
@@ -222,7 +228,7 @@ test("clicking a category tab only shows events from that category", async () =>
 });
 
 test("reset brings back all events after filtering", async () => {
-    (filterEvents as jest.Mock).mockResolvedValue([MOCK_EVENTS[0]]);
+    mockFilterEvents.mockResolvedValue([MOCK_EVENTS[0]]);
     render(<EventsPage />);
     await screen.findByText("Jazz Night");
 
@@ -237,7 +243,7 @@ test("reset brings back all events after filtering", async () => {
 });
 
 test("reset brings back all events after filterixcedfdeng", async () => {
-    (filterEvents as jest.Mock).mockRejectedValueOnce(new Error("Network Error"))
+    mockFilterEvents.mockRejectedValueOnce(new Error("Network Error"))
     render(<EventsPage />);
     await screen.findByText("Jazz Night");
 
@@ -248,7 +254,7 @@ test("reset brings back all events after filterixcedfdeng", async () => {
 });
 
 test("clicking the arrow button opens the reservation modal", async () => {
-    (getAllEvents as jest.Mock).mockResolvedValue(MOCK_EVENTS);
+    mockGetAllEvents.mockResolvedValue(MOCK_EVENTS);
     render(<EventsPage />);
     await screen.findByText("Jazz Night");
 
