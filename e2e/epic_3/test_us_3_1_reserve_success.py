@@ -3,8 +3,11 @@ US-3.1 / US-3.3: Reserve → Done → /reservation row matches modal date, locat
 """
 import os
 import re
+import time
 
 import pytest
+
+from selenium.webdriver.common.by import By
 
 from epic_3.reservation_helpers import (
     click_modal_done,
@@ -35,6 +38,9 @@ def test_reserve_shows_confirmation(logged_in_customer, base_url):
 
     click_reserve_in_modal(driver)
     wait_for_reservation_success(driver)
+    time.sleep(2)
+    confirmation_modal = driver.find_element(By.XPATH, "//*[contains(., 'A confirmation has been sent to your email.')]")
+    assert confirmation_modal is not None, "Expected 'A confirmation has been sent to your email.' to appear in the success modal"
     qty = parse_ticket_quantity_from_success_modal(driver)
     qty_phrase = "1 ticket" if qty == 1 else f"{qty} tickets"
 

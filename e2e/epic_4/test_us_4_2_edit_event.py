@@ -11,6 +11,7 @@ Algorithm:
 Asserts: intermediate rename persisted; revert restores list to original title only.
 """
 import os
+import time
 
 from selenium.webdriver.common.by import By
 
@@ -20,7 +21,9 @@ from epic_4.admin_helpers import (
     fill_admin_event_form,
     find_admin_event_card,
     goto_admin_events,
+    scroll_admin_page_to_bottom_once,
     submit_save_changes,
+    wait_admin_event_grid_ready,
     wait_till_admin_card_with_title_visible,
 )
 from support.env_checks import require_env
@@ -47,6 +50,9 @@ def test_edit_event_then_revert(logged_in_admin, base_url):
     driver = logged_in_admin
     goto_admin_events(driver, base_url)
 
+    # scroll down so all cards are visible before starting edits
+    scroll_admin_page_to_bottom_once(driver, wait_for_grid=False)
+
     card = find_admin_event_card(driver, target_sub)
     assert card is not None, f"No card matching {target_sub!r}"
     original_title = None
@@ -56,6 +62,7 @@ def test_edit_event_then_revert(logged_in_admin, base_url):
             break
     assert original_title
 
+    # first edit: rename to temp title
     click_modify_on_card(driver, card)
     title_el = wait_till_element_is_present(driver, (By.CSS_SELECTOR, "input[placeholder='Event title']"))
     title_el.clear()
@@ -63,9 +70,14 @@ def test_edit_event_then_revert(logged_in_admin, base_url):
     submit_save_changes(driver)
     close_modal_done(driver)
 
+    # wait for grid then scroll down before second edit
     wait_till_admin_card_with_title_visible(driver, temp_title)
+    wait_admin_event_grid_ready(driver)
+    scroll_admin_page_to_bottom_once(driver, wait_for_grid=False)
+
     card2 = find_admin_event_card(driver, temp_title)
 
+    # second edit: revert to original title
     click_modify_on_card(driver, card2)
     fill_admin_event_form(
         driver,
@@ -79,6 +91,10 @@ def test_edit_event_then_revert(logged_in_admin, base_url):
     submit_save_changes(driver)
     close_modal_done(driver)
 
+    # wait for grid then scroll down before final assertions
     wait_till_admin_card_with_title_visible(driver, original_title)
+    wait_admin_event_grid_ready(driver)
+    scroll_admin_page_to_bottom_once(driver, wait_for_grid=False)
+    time.sleep(2)
     assert find_admin_event_card(driver, temp_title) is None
     assert find_admin_event_card(driver, original_title) is not None

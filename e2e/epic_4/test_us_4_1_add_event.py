@@ -10,6 +10,7 @@ Algorithm:
 Asserts: created event is visible after scrolling to the bottom of the list; content and ACTIVE status.
 """
 import os
+import time
 
 from epic_4.admin_helpers import (
     close_modal_done,
@@ -69,3 +70,4 @@ def test_add_event_appears_in_admin_list(logged_in_admin, base_url):
     assert location in card.text or location.split(",")[0].strip() in card.text
     assert str(tickets) in card.text
     assert "Status: ACTIVE" in card.text
+    time.sleep(2)
