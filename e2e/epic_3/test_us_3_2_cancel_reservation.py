@@ -10,7 +10,7 @@ Algorithm:
 Asserts: active reservation existed before cancel; after cancel the UI reaches the empty-state message used by the helper.
 """
 import os
-
+import time
 import pytest
 from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.common.by import By
@@ -49,3 +49,5 @@ def test_cancel_existing_reservation(logged_in_customer, base_url):
 
     cancel_active_reservation_for_title(driver, title)
     wait_till_no_reservations_empty_state(driver)
+
+    time.sleep(2)

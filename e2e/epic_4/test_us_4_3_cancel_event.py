@@ -14,6 +14,7 @@ Algorithm:
 Asserts: preconditions for cancel; post-cancel no card shows that title (matches ACTIVE-only behaviour after cancel).
 """
 import os
+import time
 
 from epic_4.admin_helpers import (
     ADMIN_GRID_AFTER_CANCEL_TIMEOUT,
@@ -61,3 +62,4 @@ def test_cancel_event_removes_card_from_admin_grid(logged_in_admin, base_url):
         f"Expected {title!r} on no admin card after cancel; still see "
         f"{[c['title'] for c in after_cancel if title in c['title']]!r}"
     )
+    time.sleep(2)

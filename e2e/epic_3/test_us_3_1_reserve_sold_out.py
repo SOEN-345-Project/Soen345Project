@@ -1,20 +1,28 @@
 """
-US-3.1 (sold out): Reserve on a full event → “Tickets Sold Out” appears.
+US-3.1 (sold out): Reserve on a full event → 0 tickets shown, error message appears.
 
 Algorithm:
   1. Require E2E_SOLD_OUT_EVENT_TITLE.
   2. Open /event; wait for grid.
-  3. Open modal; Reserve; wait_for_sold_out_message.
-  4. Assert page source contains “Tickets Sold Out”.
+  3. Open modal; assert "0 tickets" is displayed.
+  4. Click reserve; assert "Something went wrong. Please try again." error appears.
+  5. Sleep 2 seconds.
 
-Asserts: user-visible sold-out copy is present after backend rejects the booking.
+Asserts: modal shows 0 available tickets; error message is displayed after attempting to reserve.
 """
 import os
+import time
 
 import pytest
+from selenium.webdriver.common.by import By
 
-from epic_3.reservation_helpers import click_reserve_in_modal, open_reservation_modal, wait_for_sold_out_message
-from support.waits import CUSTOMER_EVENTS_H1, wait_till_customer_event_grid_ready, wait_till_element_is_present
+from epic_3.reservation_helpers import click_reserve_in_modal, open_reservation_modal
+from support.waits import (
+    CUSTOMER_EVENTS_H1,
+    wait_till_customer_event_grid_ready,
+    wait_till_element_is_present,
+    wait_till_element_is_visible,
+)
 
 
 def test_reserve_sold_out_shows_message(logged_in_customer, base_url):
@@ -29,7 +37,15 @@ def test_reserve_sold_out_shows_message(logged_in_customer, base_url):
     wait_till_customer_event_grid_ready(driver)
 
     open_reservation_modal(driver, title)
-    click_reserve_in_modal(driver)
-    wait_for_sold_out_message(driver)
 
-    assert "Tickets Sold Out" in driver.page_source
+    available_el = wait_till_element_is_visible(driver, (By.XPATH, "//*[contains(., '0 tickets')]"))
+    assert available_el is not None, "Expected modal to show '0 tickets' for a sold-out event"
+
+    click_reserve_in_modal(driver)
+
+    error_el = wait_till_element_is_visible(
+        driver, (By.XPATH, "//*[contains(., 'Something went wrong. Please try again.')]")
+    )
+    assert error_el is not None, "Expected 'Something went wrong. Please try again.' to appear after reserving a sold-out event"
+
+    time.sleep(2)

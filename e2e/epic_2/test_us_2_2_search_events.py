@@ -11,7 +11,7 @@ Algorithm:
 Asserts: every h2 title includes the keyword; skip if no cards after search.
 """
 import os
-
+import time
 import pytest
 from selenium.webdriver.common.by import By
 
@@ -53,3 +53,5 @@ def test_search_shows_only_matching_events(logged_in_customer, base_url):
     kw = keyword.lower()
     for h2 in titles:
         assert kw in h2.text.lower(), f"Title should match keyword: {h2.text!r}"
+
+    time.sleep(2)

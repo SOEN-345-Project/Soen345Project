@@ -9,6 +9,8 @@ Algorithm:
 
 Asserts: structure and content of each card; last assert guards that cancelled events are filtered out of the customer list.
 """
+import time
+
 import pytest
 from selenium.webdriver.common.by import By
 
@@ -48,3 +50,6 @@ def test_event_cards_show_name_date_location_category(logged_in_customer, base_u
         assert "CANCELLED" not in card.text.upper(), (
             "Cancelled events should not appear in the customer event list"
         )
+
+    driver.execute_script("window.scrollTo({ top: document.body.scrollHeight, behavior: 'instant' });")
+    time.sleep(1)

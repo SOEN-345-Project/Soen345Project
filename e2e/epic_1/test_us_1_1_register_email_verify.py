@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import os
 import uuid
+import time
 
 from selenium.webdriver.common.by import By
 
@@ -56,3 +57,4 @@ def test_register_with_email_and_verification_code(driver, base_url):
     driver.find_element(By.XPATH, "//button[contains(., 'Confirm') and not(contains(., 'Confirming'))]").click()
 
     wait_till_url_contains(driver, "/signin")
+    time.sleep(2)
