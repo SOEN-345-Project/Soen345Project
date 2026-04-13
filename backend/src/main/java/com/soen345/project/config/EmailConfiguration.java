@@ -1,6 +1,7 @@
 package com.soen345.project.config;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -9,6 +10,7 @@ import org.springframework.mail.javamail.JavaMailSenderImpl;
 import java.util.Properties;
 
 @Configuration
+@ConditionalOnProperty(name = "resend.enabled", havingValue = "false", matchIfMissing = true)
 public class EmailConfiguration {
     @Value("${spring.mail.username}")
     private String emailUsername;
