@@ -1,0 +1,46 @@
+# Local full stack: Postgres + API (same image you can deploy elsewhere).
+# From repo root: docker compose up --build
+#
+# Override secrets in a .env file next to this file (do not commit .env).
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: soen345
+      POSTGRES_PASSWORD: soen345
+      POSTGRES_DB: soen345
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U soen345 -d soen345"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: "8000"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/soen345
+      SPRING_DATASOURCE_USERNAME: soen345
+      SPRING_DATASOURCE_PASSWORD: soen345
+      JWT_SECRET_KEY: local-dev-only-change-in-production-min-32-chars
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL:-dev@localhost}
+      APP_PASSWORD: ${APP_PASSWORD:-dev}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-test-sid}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-test-token}
+      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER:-+15555555555}
+      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://localhost:8080
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
