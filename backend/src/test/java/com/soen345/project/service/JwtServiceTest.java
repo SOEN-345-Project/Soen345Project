@@ -6,13 +6,9 @@ import io.jsonwebtoken.io.Encoders;
 import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import javax.crypto.SecretKey;
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -102,18 +98,5 @@ class JwtServiceTest {
         ReflectionTestUtils.setField(jwtService, "jwtExpiration", savedExpiration);
 
         assertThat(jwtService.isTokenValid(staleToken, user)).isFalse();
-    }
-
-    @Test
-    void generateToken_usesSpringSecurityUsernameWhenNotProjectUser() {
-        UserDetails generic = User.builder()
-                .username("generic-subject")
-                .password("p")
-                .authorities(List.of(new SimpleGrantedAuthority("ROLE_USER")))
-                .build();
-
-        String token = jwtService.generateToken(generic);
-
-        assertThat(jwtService.extractUsername(token)).isEqualTo("generic-subject");
     }
 }

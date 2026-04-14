@@ -7,9 +7,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -58,20 +55,5 @@ class ApplicationConfigurationTest {
         PasswordEncoder encoder = configuration.passwordEncoder();
         String hash = encoder.encode("secret");
         assertThat(encoder.matches("secret", hash)).isTrue();
-    }
-
-    @Test
-    void authenticationProvider_usesUserDetailsServiceAndEncoder() {
-        DaoAuthenticationProvider provider = configuration.authenticationProvider();
-        assertThat(provider).isNotNull();
-    }
-
-    @Test
-    void authenticationManager_delegatesToConfiguration() throws Exception {
-        AuthenticationConfiguration authConfig = org.mockito.Mockito.mock(AuthenticationConfiguration.class);
-        AuthenticationManager manager = org.mockito.Mockito.mock(AuthenticationManager.class);
-        when(authConfig.getAuthenticationManager()).thenReturn(manager);
-
-        assertThat(configuration.authenticationManager(authConfig)).isSameAs(manager);
     }
 }

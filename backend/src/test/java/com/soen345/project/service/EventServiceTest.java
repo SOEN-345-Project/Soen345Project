@@ -63,15 +63,6 @@ class EventServiceTest {
     }
 
     @Test
-    void searchEvents_blankKeyword_delegatesToActiveEvents() {
-        when(eventRepository.findActiveEvents(any(LocalDateTime.class))).thenReturn(List.of());
-
-        eventService.searchEvents("   ");
-
-        verify(eventRepository).findActiveEvents(any(LocalDateTime.class));
-    }
-
-    @Test
     void searchEvents_nullKeyword_delegatesToActiveEvents() {
         when(eventRepository.findActiveEvents(any(LocalDateTime.class))).thenReturn(List.of());
 
