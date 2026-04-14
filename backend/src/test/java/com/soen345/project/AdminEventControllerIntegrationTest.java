@@ -169,6 +169,66 @@ class AdminEventControllerIntegrationTest {
         assertThat(String.valueOf(response.getBody())).contains("Event not found");
     }
 
+    @Test
+    void getEvent_withValidId_returnsOk() {
+        Long eventId = ((EventDto) adminEventController.createEvent(admin, request("Lookup Me", 80)).getBody()).getId();
+
+        ResponseEntity<?> response = adminEventController.getEvent(eventId);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isInstanceOf(EventDto.class);
+        assertThat(((EventDto) response.getBody()).getTitle()).isEqualTo("Lookup Me");
+    }
+
+    @Test
+    void createEvent_withInvalidCategory_returnsBadRequest() {
+        AdminEventRequest bad = request("Bad Cat", 50);
+        bad.setCategoryId(999_999L);
+
+        ResponseEntity<?> response = adminEventController.createEvent(admin, bad);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(String.valueOf(response.getBody())).contains("Category not found");
+    }
+
+    @Test
+    void updateEvent_withUnknownId_returnsBadRequest() {
+        ResponseEntity<?> response = adminEventController.updateEvent(999_999L, request("Nope", 10));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(String.valueOf(response.getBody())).contains("Event not found");
+    }
+
+    @Test
+    void updateEvent_whenCancelled_returnsBadRequest() {
+        Long eventId = ((EventDto) adminEventController.createEvent(admin, request("Cancel Me", 40)).getBody()).getId();
+        adminEventController.cancelEvent(eventId);
+
+        ResponseEntity<?> response = adminEventController.updateEvent(eventId, request("Try Update", 40));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(String.valueOf(response.getBody())).contains("Event is already cancelled");
+    }
+
+    @Test
+    void cancelEvent_withUnknownId_returnsBadRequest() {
+        ResponseEntity<?> response = adminEventController.cancelEvent(999_999L);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(String.valueOf(response.getBody())).contains("Event not found");
+    }
+
+    @Test
+    void cancelEvent_whenAlreadyCancelled_returnsBadRequest() {
+        Long eventId = ((EventDto) adminEventController.createEvent(admin, request("Double Cancel", 30)).getBody()).getId();
+        adminEventController.cancelEvent(eventId);
+
+        ResponseEntity<?> response = adminEventController.cancelEvent(eventId);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(String.valueOf(response.getBody())).contains("Event is already cancelled");
+    }
+
     private AdminEventRequest request(String title, int tickets) {
         AdminEventRequest request = new AdminEventRequest();
         request.setTitle(title);
