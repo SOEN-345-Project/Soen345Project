@@ -1,5 +1,6 @@
 package com.soen345.project;
 
+import com.soen345.project.controller.EventController;
 import com.soen345.project.dto.EventDto;
 import com.soen345.project.model.Category;
 import com.soen345.project.model.Event;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDateTime;
@@ -22,6 +24,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @ActiveProfiles("test")
 class EventControllerIntegrationTest {
+
+    @Autowired
+    private EventController eventController;
 
     @Autowired
     private EventService eventService;
@@ -123,6 +128,49 @@ class EventControllerIntegrationTest {
 
         assertThat(events).hasSize(1);
         assertThat(events.getFirst().getTitle()).isEqualTo("Jazz Night");
+    }
+
+    @Test
+    void controller_getAllEvents_returnsSameAsService() {
+        ResponseEntity<List<EventDto>> response = eventController.getAllEvents();
+
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(response.getBody()).hasSize(2);
+        assertThat(response.getBody()).extracting(EventDto::getTitle)
+                .containsExactlyInAnyOrder("Jazz Night", "Soccer Final");
+    }
+
+    @Test
+    void controller_searchEvents_delegatesToService() {
+        ResponseEntity<List<EventDto>> response = eventController.searchEvents("soccer");
+
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(response.getBody()).hasSize(1);
+        assertThat(response.getBody().getFirst().getTitle()).isEqualTo("Soccer Final");
+    }
+
+    @Test
+    void controller_filterEvents_withCategoryAndLocation() {
+        Long concertId = categoryRepository.findAll().stream()
+                .filter(c -> "Concert".equals(c.getName()))
+                .findFirst().orElseThrow().getId();
+        Long bellId = locationRepository.findAll().stream()
+                .filter(l -> l.getVenueName() != null && l.getVenueName().contains("Bell"))
+                .findFirst().orElseThrow().getId();
+
+        ResponseEntity<List<EventDto>> response = eventController.filterEvents(concertId, bellId, null, null);
+
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(response.getBody()).hasSize(1);
+        assertThat(response.getBody().getFirst().getTitle()).isEqualTo("Jazz Night");
+    }
+
+    @Test
+    void controller_filterEvents_withNullParams_returnsAllActiveUpcoming() {
+        ResponseEntity<List<EventDto>> response = eventController.filterEvents(null, null, null, null);
+
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(response.getBody()).hasSize(2);
     }
 
     private Event buildEvent(String title,
