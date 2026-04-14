@@ -216,6 +216,76 @@ class AuthenticationControllerIntegrationTest {
     }
 
     @Test
+    void test_endpoint_returnsOk() {
+        ResponseEntity<String> response = authenticationController.test();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains("Authentication controller is working");
+    }
+
+    @Test
+    void home_returnsWelcomeString() {
+        String body = authenticationController.home();
+
+        assertThat(body).contains("Welcome to Eventigo");
+    }
+
+    @Test
+    void registerAdmin_createsAdministrator() {
+        ResponseEntity<?> response = authenticationController.registerAdmin(
+                signupDto("newadmin@example.com", "5551112222", "EMAIL")
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(userRepository.findByEmail("newadmin@example.com")).isPresent();
+    }
+
+    @Test
+    void registerAdmin_duplicateEmail_returnsBadRequest() {
+        authenticationController.registerAdmin(
+                signupDto("dupadmin@example.com", "5551112222", "EMAIL")
+        );
+
+        ResponseEntity<?> response = authenticationController.registerAdmin(
+                signupDto("dupadmin@example.com", "5551113333", "EMAIL")
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(String.valueOf(response.getBody())).contains("Email already in use");
+    }
+
+    @Test
+    void resendVerification_forUnverifiedUser_returnsOk() {
+        authenticationController.register(
+                signupDto("resend@example.com", "5551112222", "EMAIL")
+        );
+
+        ResponseEntity<?> response = authenticationController.resendVerification("resend@example.com", null);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(String.valueOf(response.getBody())).contains("resent successfully");
+    }
+
+    @Test
+    void checkEmail_returnsFalseWhenMissing() {
+        ResponseEntity<?> response = authenticationController.checkEmail("nobody@example.com");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo(Boolean.FALSE);
+    }
+
+    @Test
+    void signup_withPhoneVerification_sendsSmsPath() {
+        // DB still requires a non-null email on User; PHONE only selects SMS for verification delivery.
+        ResponseEntity<?> response = authenticationController.register(
+                signupDto("phoneverify@example.com", "+15550001111", "PHONE")
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(userRepository.findByPhoneNumber("+15550001111")).isPresent();
+    }
+
+    @Test
     void resendVerification_forVerifiedUser_returnsBadRequest() {
         authenticationController.register(
                 signupDto("already.verified@example.com", "5551112222", "EMAIL")
